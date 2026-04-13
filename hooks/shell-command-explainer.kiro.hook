@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Shell Command Explainer",
+  "description": "Before executing any shell command, provides a brief explanation of what the command is about to do and a safety analysis including a recommendation on whether it's safe to trust for all future sessions, highlighting any potential for malicious use. Skips the trust/malicious use analysis if a similar command was already used earlier in the conversation.",
+  "version": "1",
+  "when": {
+    "type": "preToolUse",
+    "toolTypes": [
+      "shell"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Before executing this shell command, provide:\n\n1. **Command Explanation**: A brief explanation of what this command is about to do. Use future tense (e.g. \"The next command will...\").\n\n2. **Safety & Trust Analysis** (ONLY if a similar command has NOT been used previously in this conversation): Provide a friendly assessment of whether you'd recommend that the user \"trust\" this command for all future sessions and what recommended trust glob pattern should be used. Be cautious in your assessment. Consider:\n   - Is this command safe to auto-approve for all future sessions?\n   - Could this command pattern be exploited for malicious purposes?\n   - Any risks or side effects to be aware of?\n\nARBITRARY CODE EXECUTION — NEVER TRUST:\nNEVER recommend trusting command patterns that allow arbitrary code execution. These include but are not limited to:\n  - python3 -c * / python -c *\n  - node -e * / node --eval *\n  - ruby -e *\n  - perl -e *\n  - bash -c * / sh -c *\n  - eval *\nThese patterns are equivalent to giving blanket approval for ANY code the agent wants to run. If the command uses one of these patterns, explicitly warn the user and recommend AGAINST trusting it.\n\nALSO NEVER TRUST broad interpreter + wildcard patterns such as:\n  - python3 * / python * / .venv/bin/python *\n  - node * / ts-node *\n  - ruby * / perl *\n  - bash * / sh *\nEven though these run script files rather than inline code, the agent controls what it writes into those files. Trusting these patterns is just arbitrary code execution with an extra step. Instead, recommend trusting only the specific named script being run (e.g. \".venv/bin/python _find_horses.py\") rather than a wildcard pattern.\n\nIf a similar command (same tool, same general pattern/purpose) was already executed or analyzed earlier in this conversation, SKIP the safety & trust analysis entirely and just provide the brief command explanation. DO NOT make reference to the previous use.\n\nKeep the output concise but conversational. \n\nWhen risk analysis is required, use this format:\n\n💡 **Command Explainer:** \n{command explanation}. \n\n**Risks**: {potential risks and exploits}. \n\n**Recommendation**: {recommendation on which command pattern (glob) you recommend trusting for auto-approval in the future, if any. Prefer broader glob patterns when possible but only when they are safe. DO NOT recommend trusting patterns that would allow access to files outside the current workspace. Note, only a single wildcard is allowed, only for positional arguments, may not follow a named argument, and must not be followed by any additional characters}\n\nWhen risk analysis is NOT required, use this format:\n\n💡 **Command Explainer:** {command explanation}.\n"
+  },
+  "workspaceFolderName": "fs-image-benchmark",
+  "shortName": "shell-command-explainer"
+}

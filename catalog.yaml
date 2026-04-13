@@ -1,0 +1,28 @@
+# Catalog of available KS AI Coding Kit extensions.
+# Each entry defines an installable item with its source path,
+# description, tags, and per-tool install targets.
+#
+# Target paths use {dest} as a placeholder for the user's project root.
+# A null target means the item is not compatible with that tool.
+
+items:
+  - name: ai-memory
+    type: skill
+    source: skills/ai-memory
+    description: Persistent AI memory system with project-scoped and user-scoped memory files
+    tags: [memory, context, persistence]
+    compatibility: [kiro, claude-code, codex, cursor]
+    targets:
+      kiro: .kiro/skills/ai-memory
+      claude-code: .claude/skills/ai-memory
+      codex: skills/ai-memory
+      cursor: skills/ai-memory
+
+  - name: shell-command-explainer
+    type: hook
+    source: hooks/shell-command-explainer.kiro.hook
+    description: Explains shell commands before execution with safety/trust analysis
+    tags: [safety, shell, trust, security]
+    compatibility: [kiro]
+    targets:
+      kiro: .kiro/hooks/shell-command-explainer.kiro.hook
