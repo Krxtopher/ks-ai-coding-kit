@@ -158,7 +158,7 @@ python install.py sync ai-memory
 python install.py sync --dry-run
 ```
 
-The installer tracks where each item was installed in a local manifest file (`.install-manifest.json`, gitignored). Every `install` adds an entry, every `uninstall` removes one, and `sync` reads the manifest to know what to update.
+The installer tracks where each item was installed in a local manifest file (`.install-manifest.json`, gitignored). `install` adds entries there, `uninstall` removes the corresponding entry when cleanup succeeds, and `sync` reads the manifest to know what to update.
 
 This means your workflow for making improvements is:
 

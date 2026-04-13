@@ -48,12 +48,6 @@ INJECT_PREFIX = "ks-ai-coding-kit"
 
 # Tools known not to discover extensions through symlinks.
 SYMLINK_INCOMPATIBLE_TOOLS: set[str] = {"kiro"}
-_SYMLINK_WARNING = (
-    "⚠ Symlink mode is not supported by Kiro (skills installed as symlinks "
-    "won't be discovered). Compatibility with other tools is unverified — "
-    "use symlinks at your own risk. Prefer 'copy' mode unless you are "
-    "actively developing this extension."
-)
 
 
 # ---------------------------------------------------------------------------
@@ -265,15 +259,40 @@ def _manifest_path(repo_root: Path) -> Path:
     return repo_root / MANIFEST_FILE
 
 
+def _is_valid_manifest_entry(entry: object) -> bool:
+    """Return True if the manifest entry has the expected structure."""
+    if not isinstance(entry, dict):
+        return False
+    required_keys = {"name", "dest", "tool", "mode"}
+    return required_keys.issubset(entry.keys())
+
+
 def _load_manifest(repo_root: Path) -> list[dict]:
     """Load the install manifest, returning an empty list if it doesn't exist."""
     path = _manifest_path(repo_root)
     if not path.exists():
         return []
     try:
-        return json.loads(path.read_text())
+        raw = json.loads(path.read_text())
     except (json.JSONDecodeError, OSError):
         return []
+
+    if not isinstance(raw, list):
+        print(
+            f"Warning: ignoring invalid manifest at {path}: expected a JSON list.",
+            file=sys.stderr,
+        )
+        return []
+
+    valid_entries = [entry for entry in raw if _is_valid_manifest_entry(entry)]
+    if len(valid_entries) != len(raw):
+        n_bad = len(raw) - len(valid_entries)
+        print(
+            f"Warning: ignoring {n_bad} invalid manifest "
+            f"entr{'y' if n_bad == 1 else 'ies'} in {path}.",
+            file=sys.stderr,
+        )
+    return valid_entries
 
 
 def _save_manifest(repo_root: Path, entries: list[dict]) -> None:
@@ -289,6 +308,7 @@ def _add_manifest_entry(
     dest: Path,
     tool: str,
     mode: str,
+    target: str,
 ) -> None:
     """Record an installation in the manifest, replacing any existing entry
     for the same (name, dest, tool) combination."""
@@ -303,6 +323,7 @@ def _add_manifest_entry(
         "dest": str(dest),
         "tool": tool,
         "mode": mode,
+        "target": target,
     })
     _save_manifest(repo_root, entries)
 
@@ -492,8 +513,11 @@ def cmd_install(
     # Inject steering text into the tool's root steering file if configured.
     inject_steering(dest, tool, item, dry_run=False)
 
-    # Record in the local install manifest.
-    _add_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool, mode=mode)
+    # Record in the local install manifest (including the resolved target path).
+    _add_manifest_entry(
+        repo_root, name=item.name, dest=dest, tool=tool, mode=mode,
+        target=str(dst),
+    )
 
 
 def cmd_uninstall(
@@ -512,8 +536,14 @@ def cmd_uninstall(
 
     dst = dest / target_rel
 
-    if not dst.exists():
+    # Treat broken symlinks as installed (exists() returns False for them).
+    installed = dst.exists() or dst.is_symlink()
+
+    if not installed:
         print(f"'{item.name}' is not installed at {dst}.")
+        # Still remove any stale manifest entry so sync won't recreate it.
+        if not dry_run:
+            _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
         return
 
     if dry_run:
@@ -574,15 +604,21 @@ def cmd_sync(
         tool = entry["tool"]
         mode = entry["mode"]
         dest = Path(entry["dest"])
-        target_rel = item.targets.get(tool)
 
-        if target_rel is None:
-            print(f"⚠ '{item.name}' no longer has a target for {tool}, skipping.")
-            skipped += 1
-            continue
+        # Prefer the resolved target path stored at install time. Fall back
+        # to the current catalog target for manifests written before this
+        # field was added.
+        if "target" in entry:
+            dst = Path(entry["target"])
+        else:
+            target_rel = item.targets.get(tool)
+            if target_rel is None:
+                print(f"⚠ '{item.name}' no longer has a target for {tool}, skipping.")
+                skipped += 1
+                continue
+            dst = dest / target_rel
 
         src = repo_root / item.source
-        dst = dest / target_rel
 
         if not src.exists():
             print(f"⚠ Source missing for '{item.name}': {src}, skipping.")
@@ -696,6 +732,22 @@ def resolve_tool(args_tool: Optional[str], dest: Path, item: CatalogItem) -> str
     )
 
 
+def _symlink_warning_text(tool: str) -> str:
+    """Return a tool-appropriate symlink warning string."""
+    if tool in SYMLINK_INCOMPATIBLE_TOOLS:
+        return (
+            f"⚠ Symlink mode is NOT supported by {tool}. Extensions installed "
+            f"as symlinks will not be discovered. Prefer 'copy' mode unless you "
+            f"are actively developing this extension."
+        )
+    return (
+        f"⚠ Symlink compatibility with {tool} is unverified. Extensions "
+        f"installed as symlinks may not be discovered by the tool. Use at "
+        f"your own risk — prefer 'copy' mode unless you are actively "
+        f"developing this extension."
+    )
+
+
 def resolve_mode(args_mode: Optional[str], tool: str) -> str:
     """Determine install mode (copy or symlink), prompting if not specified."""
     if args_mode:
@@ -705,7 +757,7 @@ def resolve_mode(args_mode: Optional[str], tool: str) -> str:
     return prompt_choice(
         "How should the extension be installed?",
         ["copy", "symlink (see warning below)"],
-        footer=_SYMLINK_WARNING,
+        footer=_symlink_warning_text(tool),
         value_map={"symlink (see warning below)": "symlink"},
     )
 

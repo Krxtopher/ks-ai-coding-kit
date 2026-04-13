@@ -23,7 +23,7 @@ ks-ai-coding-kit/
 
 - **Catalog** (`catalog.yaml`) is the source of truth for all installable items. Each entry defines name, type, source path, description, tags, compatibility, and per-tool install targets.
 - **Installer** (`install.py`) reads the catalog and copies or symlinks items to the correct location. Supports `list`, `install`, `uninstall`, `sync`, `--dry-run`, `--tool`, `--mode copy|symlink`, `--tag`, `--type`. Prompts interactively for `--tool` and `--mode` when omitted. No dependencies beyond Python 3.10+ (PyYAML optional).
-- **Install manifest** (`.install-manifest.json`) is a local, gitignored registry of all installed items. Written automatically by `install` and `uninstall`. Used by `sync` to know which targets to update.
+- **Install manifest** (`.install-manifest.json`) is a local, gitignored registry of installed items. Written automatically by `install`, and normally updated by `uninstall` when it removes an installed target. Used by `sync` to know which targets to update.
 - **Steering injection**: Skills can define a `steering-inject` key under `metadata` in their `SKILL.md` front-matter. On install, the installer appends this text to the tool's root steering file (`AGENTS.md` by default, `CLAUDE.md` for Claude Code). The injected block is wrapped in HTML comment markers (`<!-- ks-ai-coding-kit:<name> -->`) for clean uninstall.
 - **Steering files** are standalone Markdown files. They may use YAML front-matter for metadata (name, description, compatibility, tags).
 - **Skills** follow the Kiro Agent Skills spec. Each skill lives in its own subdirectory under `skills/` and contains a `SKILL.md` as its entry point.
