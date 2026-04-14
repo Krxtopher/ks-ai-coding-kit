@@ -111,7 +111,11 @@ If an item only supports one tool, that step is skipped automatically:
 Only one compatible tool: kiro
 How should the extension be installed?
   1) copy
-  2) symlink
+  2) symlink (see warning below)
+
+⚠ Symlink mode is NOT supported by kiro. Extensions installed as
+symlinks will not be discovered. Prefer 'copy' mode unless you are
+actively developing this extension.
 Enter choice: 2
 ✓ Installed 'shell-command-explainer' (symlink) → /Users/you/my-project/.kiro/hooks/shell-command-explainer.kiro.hook
 ```

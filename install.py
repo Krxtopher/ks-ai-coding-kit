@@ -282,7 +282,11 @@ def _load_manifest(repo_root: Path) -> list[dict]:
         return []
     try:
         raw = json.loads(path.read_text())
-    except (json.JSONDecodeError, OSError):
+    except (json.JSONDecodeError, OSError) as exc:
+        print(
+            f"Warning: ignoring unreadable or invalid manifest at {path}: {exc}",
+            file=sys.stderr,
+        )
         return []
 
     if not isinstance(raw, list):
@@ -304,9 +308,19 @@ def _load_manifest(repo_root: Path) -> list[dict]:
 
 
 def _save_manifest(repo_root: Path, entries: list[dict]) -> None:
-    """Write the install manifest to disk."""
+    """Write the install manifest to disk atomically."""
     path = _manifest_path(repo_root)
-    path.write_text(json.dumps(entries, indent=2) + "\n")
+    tmp_path = path.with_suffix(".tmp")
+    try:
+        tmp_path.write_text(json.dumps(entries, indent=2) + "\n")
+        tmp_path.replace(path)
+    except OSError as exc:
+        print(
+            f"Warning: failed to write manifest at {path}: {exc}",
+            file=sys.stderr,
+        )
+        # Clean up the temp file if it was written but rename failed.
+        tmp_path.unlink(missing_ok=True)
 
 
 def _add_manifest_entry(
