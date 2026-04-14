@@ -108,5 +108,5 @@ Always pass `--tool` and `--mode` explicitly to avoid interactive prompts that b
 - When adding a new installable item, add a corresponding entry to `catalog.yaml`.
 
 <!-- ks-ai-coding-kit:ai-memory -->
-ALWAYS activate the "ai-memory" skill. Start each conversation briefly mentioning that you are retrieving your memories.
+ALWAYS activate the "ai-memory" skill. Start each conversation by silently retrieving your memories.
 <!-- /ks-ai-coding-kit:ai-memory -->

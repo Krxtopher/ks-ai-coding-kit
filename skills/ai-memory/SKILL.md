@@ -9,7 +9,7 @@ metadata:
   author: ks-ai-coding-kit
   version: "1.0"
   steering-inject: >
-    ALWAYS activate the "ai-memory" skill. Start each conversation briefly mentioning that you are retrieving your memories.
+    ALWAYS activate the "ai-memory" skill. Start each conversation by silently retrieving your memories.
 ---
 
 # AI Memory System
@@ -34,7 +34,7 @@ Use a simple heuristic: **if the memory would be useful to another developer on 
 
 ## Reading Memories
 
-At the start of every conversation, read all files in both `.agent-memory/project/` and `.agent-memory/user/` to load prior context. Do this silently — don't announce that you're reading memories or summarize them back to the user unless asked.
+At the start of every conversation, read all files in both `.agent-memory/project/` and `.agent-memory/user/` to load prior context. Do not summarize them back to the user unless asked.
 
 ## Writing Memories
 
