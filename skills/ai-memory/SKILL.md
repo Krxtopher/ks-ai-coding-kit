@@ -44,29 +44,29 @@ You MUST update memory files proactively. Do not wait for an ideal moment — wr
 
 Use this checklist to recognize when a memory write is needed:
 
-- **User asks you to do something** (build, fix, refactor, investigate, change) → log it as a task in `tasks.md`
-- **User corrects your behavior or assumptions** → log the correction in `preferences.md`
-- **You discover something surprising about the codebase** → log it in the appropriate `insights.md`
-- **You make a design decision or trade-off** → log it in `project/insights.md`
-- **User states a preference or habit** → log it in `preferences.md`
-- **A personal technical insight comes up** → log it in `user/insights.md`
-- **Conversation is ending with unfinished work** → update task status in `tasks.md`
+- **User asks you to do something** (build, fix, refactor, investigate, change) → log it as a task in `.agent-memory/project/tasks.md`
+- **User corrects your behavior or assumptions** → log the correction in `.agent-memory/user/preferences.md`
+- **You discover something surprising about the codebase** → log it in the appropriate insights file under `.agent-memory/project/` or `.agent-memory/user/`
+- **You make a design decision or trade-off** → log it in `.agent-memory/project/insights.md`
+- **User states a preference or habit** → log it in `.agent-memory/user/preferences.md`
+- **A personal technical insight comes up** → log it in `.agent-memory/user/insights.md`
+- **Conversation is ending with unfinished work** → update task status in `.agent-memory/project/tasks.md`
 
 ### Task Tracking
 
 Task tracking is a core responsibility of this memory system. Follow these rules strictly:
 
-- **At the start of any task**, immediately create an entry in `tasks.md` with status `in-progress`. Do this before you begin the actual work. If the user asks you to build, fix, refactor, investigate, or change something — that's a task.
+- **At the start of any task**, immediately create an entry in `.agent-memory/project/tasks.md` with status `in-progress`. Do this before you begin the actual work. If the user asks you to build, fix, refactor, investigate, or change something — that's a task.
 - **At the end of a conversation** where a task was worked on, update its status. Mark it `completed` if done, or update `Next steps` with enough context that a future session can resume without re-discovery.
-- **If a task spans multiple conversations**, the entry in `tasks.md` is how you'll pick it back up. Include enough detail in `Context` and `Next steps` to make resumption seamless.
-- **Before your final response in a conversation**, review whether any tasks were started or progressed, and ensure `tasks.md` is up to date. This is not optional.
+- **If a task spans multiple conversations**, the entry in `.agent-memory/project/tasks.md` is how you'll pick it back up. Include enough detail in `Context` and `Next steps` to make resumption seamless.
+- **Before your final response in a conversation**, review whether any tasks were started or progressed, and ensure `.agent-memory/project/tasks.md` is up to date. This is not optional.
 
 ### General Guidelines
 
 - Keep entries concise — one to two lines each, except for in-flight tasks which can include more detail (status, blockers, next steps).
 - Use bullet points for individual memories.
 - Add a date prefix in `YYYY-MM-DD` format to each entry so stale memories can be identified.
-- When a task is completed, move it from `tasks.md` or remove it. Don't let completed tasks accumulate.
+- When a task is completed, move it from `.agent-memory/project/tasks.md` or remove it. Don't let completed tasks accumulate.
 - When a preference or insight is superseded, update or replace the old entry rather than adding a duplicate.
 - Don't ask the user for permission to update memories. Just do it when appropriate.
 - If a memory file doesn't exist yet, create it.
