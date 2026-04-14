@@ -9,7 +9,7 @@ metadata:
   author: ks-ai-coding-kit
   version: "1.0"
   steering-inject: >
-    ALWAYS activate the "ai-memory" skill. Start each conversation briefly mentioning that you are retrieving your memories.
+    ALWAYS activate the "ai-memory" skill. Start each conversation by silently retrieving your memories.
 ---
 
 # AI Memory System
@@ -34,28 +34,57 @@ Use a simple heuristic: **if the memory would be useful to another developer on 
 
 ## Reading Memories
 
-At the start of every conversation, read all files in both `.agent-memory/project/` and `.agent-memory/user/` to load prior context. Do this silently — don't announce that you're reading memories or summarize them back to the user unless asked.
+At the start of every conversation, read all files in both `.agent-memory/project/` and `.agent-memory/user/` to load prior context. Do not summarize them back to the user unless asked.
 
 ## Writing Memories
 
-Update memory files whenever you discover something worth remembering. This includes:
+You MUST update memory files proactively. Do not wait for an ideal moment — write early and often. When in doubt, write it down.
 
-- A user preference or habit → `.agent-memory/user/preferences.md`
-- A technical insight or gotcha about this project → `.agent-memory/project/insights.md`
-- A personal technical insight → `.agent-memory/user/insights.md`
-- A new task being started, or progress/completion of an existing task → `.agent-memory/project/tasks.md`
-- A correction the user makes to your behavior or assumptions → `.agent-memory/user/preferences.md`
+### Proactive Memory Triggers
 
-### Guidelines
+Use this checklist to recognize when a memory write is needed:
+
+- **User asks you to do something** (build, fix, refactor, investigate, change) → log it as a task in `.agent-memory/project/tasks.md`
+- **User corrects your behavior or assumptions** → log the correction in `.agent-memory/user/preferences.md`
+- **You discover something surprising about the codebase** → log it in the appropriate insights file under `.agent-memory/project/` or `.agent-memory/user/`
+- **You make a design decision or trade-off** → log it in `.agent-memory/project/insights.md`
+- **User states a preference or habit** → log it in `.agent-memory/user/preferences.md`
+- **A personal technical insight comes up** → log it in `.agent-memory/user/insights.md`
+- **Conversation is ending with unfinished work** → update task status in `.agent-memory/project/tasks.md`
+
+### Task Tracking
+
+Task tracking is a core responsibility of this memory system. Follow these rules strictly:
+
+- **At the start of any task**, immediately create an entry in `.agent-memory/project/tasks.md` with status `in-progress`. Do this before you begin the actual work. If the user asks you to build, fix, refactor, investigate, or change something — that's a task.
+- **At the end of a conversation** where a task was worked on, update its status. Mark it `completed` if done, or update `Next steps` with enough context that a future session can resume without re-discovery.
+- **If a task spans multiple conversations**, the entry in `.agent-memory/project/tasks.md` is how you'll pick it back up. Include enough detail in `Context` and `Next steps` to make resumption seamless.
+- **Before your final response in a conversation**, review whether any tasks were started or progressed, and ensure `.agent-memory/project/tasks.md` is up to date. This is not optional.
+
+### General Guidelines
 
 - Keep entries concise — one to two lines each, except for in-flight tasks which can include more detail (status, blockers, next steps).
 - Use bullet points for individual memories.
 - Add a date prefix in `YYYY-MM-DD` format to each entry so stale memories can be identified.
-- When a task is completed, move it from `tasks.md` or remove it. Don't let completed tasks accumulate.
+- When a task is completed, move it from `.agent-memory/project/tasks.md` or remove it. Don't let completed tasks accumulate.
 - When a preference or insight is superseded, update or replace the old entry rather than adding a duplicate.
 - Don't ask the user for permission to update memories. Just do it when appropriate.
 - If a memory file doesn't exist yet, create it.
 - Don't assume the user has visibility into how your memories are organized and stored. There's no need for the user to concern themselves with those details.
+
+## Memory Maintenance
+
+Memory files load into context every conversation — keep them lean.
+
+**Limits:** Target ~100 lines per file. If a file exceeds 150 lines, prune before adding new entries.
+
+**Pruning priority:**
+1. Remove completed tasks. Distill any lasting insight into `insights.md` first.
+2. Merge related entries into one.
+3. Drop entries whose underlying facts have changed or no longer apply. Age alone is not a reason to remove — architectural decisions and preferences can stay indefinitely.
+4. Condense verbose entries.
+
+**When:** Prune during reading if a file is long, or during writing if near the limit. Don't announce pruning unless removing something the user might want to keep.
 
 ## File Format
 
