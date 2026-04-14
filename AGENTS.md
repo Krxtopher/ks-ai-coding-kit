@@ -22,7 +22,8 @@ ks-ai-coding-kit/
 ## Conventions
 
 - **Catalog** (`catalog.yaml`) is the source of truth for all installable items. Each entry defines name, type, source path, description, tags, compatibility, and per-tool install targets.
-- **Installer** (`install.py`) reads the catalog and copies or symlinks items to the correct location. Supports `list`, `install`, `uninstall`, `--dry-run`, `--tool`, `--mode copy|symlink`, `--tag`, `--type`. Prompts interactively for `--tool` and `--mode` when omitted. No dependencies beyond Python 3.10+ (PyYAML optional).
+- **Installer** (`install.py`) reads the catalog and copies or symlinks items to the correct location. Supports `list`, `install`, `uninstall`, `sync`, `--dry-run`, `--tool`, `--mode copy|symlink`, `--tag`, `--type`. Prompts interactively for `--tool` and `--mode` when omitted. No dependencies beyond Python 3.10+ (PyYAML optional).
+- **Install manifest** (`.install-manifest.json`) is a local, gitignored registry of installed items. Written automatically by `install`, and normally updated by `uninstall` when it removes an installed target. Used by `sync` to know which targets to update.
 - **Steering injection**: Skills can define a `steering-inject` key under `metadata` in their `SKILL.md` front-matter. On install, the installer appends this text to the tool's root steering file (`AGENTS.md` by default, `CLAUDE.md` for Claude Code). The injected block is wrapped in HTML comment markers (`<!-- ks-ai-coding-kit:<name> -->`) for clean uninstall.
 - **Steering files** are standalone Markdown files. They may use YAML front-matter for metadata (name, description, compatibility, tags).
 - **Skills** follow the Kiro Agent Skills spec. Each skill lives in its own subdirectory under `skills/` and contains a `SKILL.md` as its entry point.
@@ -81,14 +82,22 @@ python install.py install <name> --dest /path/to/project --tool <tool> --mode <c
 # Uninstall
 python install.py uninstall <name> --dest /path/to/project --tool <tool>
 
+# Sync all installed items (re-copy from kit repo to all registered targets)
+python install.py sync
+
+# Sync a single item
+python install.py sync <name>
+
 # Preview without changes
 python install.py install <name> --dest /path/to/project --tool <tool> --mode copy --dry-run
+python install.py sync --dry-run
 ```
 
 Key flags:
 - `--dest` — the target project directory (required for install/uninstall)
 - `--tool` — target tool name as it appears in `catalog.yaml` targets (e.g. `kiro`, `claude-code`, `codex`)
 - `--mode copy|symlink` — `copy` duplicates files; `symlink` links back to this repo (useful during development)
+  - ⚠ **Symlink mode does not work with Kiro** — skills installed as symlinks won't be discovered. Compatibility with other tools is unverified. Prefer `copy` unless you are actively developing an extension in this repo.
 - `--dry-run` — shows what would happen without making changes
 
 Always pass `--tool` and `--mode` explicitly to avoid interactive prompts that block non-interactive agent execution.

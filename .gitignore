@@ -11,6 +11,12 @@ Thumbs.db
 # Kiro workspace config (don't ship personal config)
 .kiro/
 
+# Other personal config
+.agent-memory/
+
+# Installer manifest (local install registry, not committed)
+.install-manifest.json
+
 # Python
 __pycache__/
 *.pyc
