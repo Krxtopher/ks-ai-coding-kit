@@ -264,7 +264,15 @@ def _is_valid_manifest_entry(entry: object) -> bool:
     if not isinstance(entry, dict):
         return False
     required_keys = {"name", "dest", "tool", "mode"}
-    return required_keys.issubset(entry.keys())
+    if not required_keys.issubset(entry.keys()):
+        return False
+    if not all(isinstance(entry[key], str) for key in required_keys):
+        return False
+    if entry["mode"] not in {"copy", "symlink"}:
+        return False
+    if "target" in entry and not isinstance(entry["target"], str):
+        return False
+    return True
 
 
 def _load_manifest(repo_root: Path) -> list[dict]:
@@ -592,6 +600,7 @@ def cmd_sync(
 
     catalog_map = {item.name: item for item in catalog}
     synced = 0
+    would_sync = 0
     skipped = 0
 
     for entry in entries:
@@ -605,18 +614,31 @@ def cmd_sync(
         mode = entry["mode"]
         dest = Path(entry["dest"])
 
+        dest_root = dest.resolve(strict=False)
+
         # Prefer the resolved target path stored at install time. Fall back
         # to the current catalog target for manifests written before this
         # field was added.
         if "target" in entry:
             dst = Path(entry["target"])
+            if not dst.is_absolute():
+                print(f"⚠ Manifest target for '{item.name}' is not absolute: {dst}, skipping.")
+                skipped += 1
+                continue
+            dst = dst.resolve(strict=False)
+            try:
+                dst.relative_to(dest_root)
+            except ValueError:
+                print(f"⚠ Manifest target for '{item.name}' is outside destination root: {dst}, skipping.")
+                skipped += 1
+                continue
         else:
             target_rel = item.targets.get(tool)
             if target_rel is None:
                 print(f"⚠ '{item.name}' no longer has a target for {tool}, skipping.")
                 skipped += 1
                 continue
-            dst = dest / target_rel
+            dst = dest_root / target_rel
 
         src = repo_root / item.source
 
@@ -634,7 +656,7 @@ def cmd_sync(
 
         if dry_run:
             print(f"[dry-run] Would {verb} '{item.name}' → {dst}")
-            synced += 1
+            would_sync += 1
             continue
 
         # Remove existing target.
@@ -659,7 +681,10 @@ def cmd_sync(
         inject_steering(dest, tool, item, dry_run=False)
         synced += 1
 
-    print(f"\nDone. {synced} synced, {skipped} skipped.")
+    if dry_run:
+        print(f"\nDone. {would_sync} would be synced, {skipped} skipped.")
+    else:
+        print(f"\nDone. {synced} synced, {skipped} skipped.")
 
 
 # ---------------------------------------------------------------------------
