@@ -38,15 +38,30 @@ At the start of every conversation, read all files in both `.agent-memory/projec
 
 ## Writing Memories
 
-Update memory files whenever you discover something worth remembering. This includes:
+You MUST update memory files proactively. Do not wait for an ideal moment — write early and often. When in doubt, write it down.
 
-- A user preference or habit → `.agent-memory/user/preferences.md`
-- A technical insight or gotcha about this project → `.agent-memory/project/insights.md`
-- A personal technical insight → `.agent-memory/user/insights.md`
-- A new task being started, or progress/completion of an existing task → `.agent-memory/project/tasks.md`
-- A correction the user makes to your behavior or assumptions → `.agent-memory/user/preferences.md`
+### Proactive Memory Triggers
 
-### Guidelines
+Use this checklist to recognize when a memory write is needed:
+
+- **User asks you to do something** (build, fix, refactor, investigate, change) → log it as a task in `tasks.md`
+- **User corrects your behavior or assumptions** → log the correction in `preferences.md`
+- **You discover something surprising about the codebase** → log it in the appropriate `insights.md`
+- **You make a design decision or trade-off** → log it in `project/insights.md`
+- **User states a preference or habit** → log it in `preferences.md`
+- **A personal technical insight comes up** → log it in `user/insights.md`
+- **Conversation is ending with unfinished work** → update task status in `tasks.md`
+
+### Task Tracking
+
+Task tracking is a core responsibility of this memory system. Follow these rules strictly:
+
+- **At the start of any task**, immediately create an entry in `tasks.md` with status `in-progress`. Do this before you begin the actual work. If the user asks you to build, fix, refactor, investigate, or change something — that's a task.
+- **At the end of a conversation** where a task was worked on, update its status. Mark it `completed` if done, or update `Next steps` with enough context that a future session can resume without re-discovery.
+- **If a task spans multiple conversations**, the entry in `tasks.md` is how you'll pick it back up. Include enough detail in `Context` and `Next steps` to make resumption seamless.
+- **Before your final response in a conversation**, review whether any tasks were started or progressed, and ensure `tasks.md` is up to date. This is not optional.
+
+### General Guidelines
 
 - Keep entries concise — one to two lines each, except for in-flight tasks which can include more detail (status, blockers, next steps).
 - Use bullet points for individual memories.
@@ -56,6 +71,20 @@ Update memory files whenever you discover something worth remembering. This incl
 - Don't ask the user for permission to update memories. Just do it when appropriate.
 - If a memory file doesn't exist yet, create it.
 - Don't assume the user has visibility into how your memories are organized and stored. There's no need for the user to concern themselves with those details.
+
+## Memory Maintenance
+
+Memory files load into context every conversation — keep them lean.
+
+**Limits:** Target ~100 lines per file. If a file exceeds 150 lines, prune before adding new entries.
+
+**Pruning priority:**
+1. Remove completed tasks. Distill any lasting insight into `insights.md` first.
+2. Merge related entries into one.
+3. Drop entries whose underlying facts have changed or no longer apply. Age alone is not a reason to remove — architectural decisions and preferences can stay indefinitely.
+4. Condense verbose entries.
+
+**When:** Prune during reading if a file is long, or during writing if near the limit. Don't announce pruning unless removing something the user might want to keep.
 
 ## File Format
 
