@@ -37,8 +37,8 @@ QUOTE_BORDER = "D0D0D0"                         # Gray border for blockquotes
 QUOTE_BG = "F9F9F9"                             # Very light gray for blockquotes
 
 # --- Font stacks ---
-BODY_FONT = "Aptos"
-HEADING_FONT = "Aptos"
+BODY_FONT = "Sitka Text"
+HEADING_FONT = "Sitka Text"
 CODE_FONT = "Cascadia Code"
 
 

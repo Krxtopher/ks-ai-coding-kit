@@ -49,7 +49,7 @@ python SKILL_PATH/scripts/fix-list-indent.py output.docx
 ```
 
 Replace `SKILL_PATH` with the actual path to this skill's directory. The reference template provides:
-- **Aptos** font family (falls back to Calibri)
+- **Sitka Text** font family for body and headings
 - Bold near-black headings with subtle bottom borders on H1/H2
 - Cascadia Code for code blocks (falls back to Consolas)
 - 1.2× line spacing for readability
