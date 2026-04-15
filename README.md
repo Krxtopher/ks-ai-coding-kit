@@ -42,6 +42,7 @@ If you're new to AI coding assistants, here's a quick glossary of the extension 
 | Directory | Description |
 |-----------|-------------|
 | [`ai-memory`](skills/ai-memory/SKILL.md) | Persistent AI memory system with project-scoped and user-scoped memory files for retaining context across conversations. Works with Kiro, Claude Code, Codex, and Cursor. |
+| [`doc-convert`](skills/doc-convert/SKILL.md) | Convert documents between formats using pandoc. Ships with a styled Word reference template for polished Markdown-to-DOCX output. Works with Kiro, Claude Code, Codex, and Cursor. |
 
 ### Steering Files
 

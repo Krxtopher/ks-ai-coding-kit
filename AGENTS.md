@@ -37,6 +37,7 @@ ks-ai-coding-kit/
 | Directory | Compatibility | Description |
 |-----------|---------------|-------------|
 | `skills/ai-memory` | Kiro, Claude Code, Codex, Cursor | Persistent AI memory system — project-scoped and user-scoped memory files under `.agent-memory/` |
+| `skills/doc-convert` | Kiro, Claude Code, Codex, Cursor | Document conversion using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
 
 ### Steering Files
 
