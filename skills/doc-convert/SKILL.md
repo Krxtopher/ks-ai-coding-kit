@@ -37,15 +37,30 @@ For PDF output, a LaTeX engine is also required (e.g., `brew install basictex` o
 This is the primary use case. Use the bundled reference template for styled output:
 
 ```bash
-pandoc input.md -o output.docx --reference-doc=SKILL_PATH/assets/reference.docx
+pandoc input.md -o output.docx \
+  --reference-doc=SKILL_PATH/assets/reference.docx \
+  --lua-filter=SKILL_PATH/assets/docx-polish.lua
+```
+
+Then fix list indentation (pandoc hardcodes deep nesting):
+
+```bash
+python SKILL_PATH/scripts/fix-list-indent.py output.docx
 ```
 
 Replace `SKILL_PATH` with the actual path to this skill's directory. The reference template provides:
-- **Aptos / Aptos Display** font family (falls back to Calibri / Calibri Light)
-- Navy/blue heading hierarchy with comfortable spacing
+- **Aptos** font family (falls back to Calibri)
+- Bold near-black headings with subtle bottom borders on H1/H2
 - Cascadia Code for code blocks (falls back to Consolas)
-- 1.15× line spacing for readability
+- 1.2× line spacing for readability
 - Styled block quotes, hyperlinks, and tables
+
+The Lua filter adds:
+- **Light gray background** on code blocks with an amber/orange left border accent
+- **Gray character shading** on inline code
+
+The post-processing script fixes:
+- **Nested list indentation** reduced to ~1/3 of pandoc's default
 
 ### Other Common Conversions
 
@@ -66,16 +81,21 @@ pandoc input.html -o output.md
 pandoc input.md -o output.tex
 
 # Multiple inputs → single output
-pandoc chapter1.md chapter2.md chapter3.md -o book.docx --reference-doc=SKILL_PATH/assets/reference.docx
+pandoc chapter1.md chapter2.md chapter3.md -o book.docx \
+  --reference-doc=SKILL_PATH/assets/reference.docx \
+  --lua-filter=SKILL_PATH/assets/docx-polish.lua
 ```
 
 ## Conversion Guidelines
 
 ### When converting TO Word (.docx)
 
-1. **Always use the reference template** unless the user provides their own:
+1. **Always use the reference template and Lua filter** unless the user provides their own:
    ```bash
-   pandoc input.md -o output.docx --reference-doc=SKILL_PATH/assets/reference.docx
+   pandoc input.md -o output.docx \
+     --reference-doc=SKILL_PATH/assets/reference.docx \
+     --lua-filter=SKILL_PATH/assets/docx-polish.lua
+   python SKILL_PATH/scripts/fix-list-indent.py output.docx
    ```
 
 2. **User-provided templates** take priority. If the user specifies a custom `.docx` template, use it instead:
@@ -85,7 +105,10 @@ pandoc chapter1.md chapter2.md chapter3.md -o book.docx --reference-doc=SKILL_PA
 
 3. **Table of contents** — add `--toc` for longer documents:
    ```bash
-   pandoc input.md -o output.docx --reference-doc=SKILL_PATH/assets/reference.docx --toc
+   pandoc input.md -o output.docx \
+     --reference-doc=SKILL_PATH/assets/reference.docx \
+     --lua-filter=SKILL_PATH/assets/docx-polish.lua --toc
+   python SKILL_PATH/scripts/fix-list-indent.py output.docx
    ```
 
 4. **Metadata** — pandoc reads YAML front-matter from Markdown files for title, author, and date:
