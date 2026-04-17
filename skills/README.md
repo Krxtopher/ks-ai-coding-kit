@@ -4,7 +4,7 @@ Reusable agent skills — packaged capabilities that extend what your AI coding 
 
 ## What Are Skills?
 
-Skills are multi-file packages that define a specific capability for an AI coding agent. Each skill lives in its own directory and includes a `SKILL.md` entry point that describes the skill's purpose, inputs, and behavior. Skills follow the [Agent Skills open standard](https://agents.md) and work across compatible tools.
+Skills are multi-file packages that define a specific capability for an AI coding agent. Each skill lives in its own directory and includes a `SKILL.md` entry point that describes the skill's purpose, inputs, and behavior. Skills follow the [Agent Skills open standard](https://agentskills.io/) and work across compatible tools.
 
 ## Compatibility
 

@@ -106,7 +106,7 @@ def main() -> None:
     output_path = Path(sys.argv[2]) if len(sys.argv) > 2 else input_path
 
     if not input_path.exists():
-        print(f"Error: {input_path} not found")
+        print(f"Error: {input_path} not found", file=sys.stderr)
         sys.exit(1)
 
     process_docx(input_path, output_path)

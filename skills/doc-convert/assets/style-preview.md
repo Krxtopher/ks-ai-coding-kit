@@ -701,7 +701,7 @@ Not all features work everywhere. Here's a quick compatibility matrix:
 | Bold / Italic        | ✅          | ✅           | ✅       | ✅     | ✅     |
 | Strikethrough        | ❌          | ✅           | ✅       | ✅     | ✅     |
 | Tables               | ❌          | ✅           | ✅       | ✅     | ✅     |
-| Task Lists           | ❌          | ✅           | ✅       | ✅     | ❌     |
+| Task Lists           | ❌          | ✅           | ✅       | ✅     | ✅¹    |
 | Fenced Code Blocks   | ❌          | ✅           | ✅       | ✅     | ✅     |
 | Footnotes            | ❌          | ✅           | ✅       | ✅     | ✅     |
 | Math (LaTeX)         | ❌          | ✅           | ✅       | ✅     | ✅     |
@@ -712,6 +712,8 @@ Not all features work everywhere. Here's a quick compatibility matrix:
 | Emoji Shortcodes     | ❌          | ✅           | ❌       | ✅     | ❌     |
 
 \* Obsidian uses its own callout syntax: `> [!note]`, `> [!warning]`, etc.
+
+¹ Pandoc supports task lists with GFM input format (`-f gfm` or `markdown+task_lists`).
 
 ---
 

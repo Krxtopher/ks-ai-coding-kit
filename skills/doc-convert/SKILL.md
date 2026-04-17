@@ -158,7 +158,7 @@ The `scripts/customize-reference.py` script can also regenerate the template fro
 ```bash
 pip install python-docx
 pandoc --print-default-data-file reference.docx > base.docx
-python SKILL_PATH/scripts/customize-reference.py base.docx assets/reference.docx
+python SKILL_PATH/scripts/customize-reference.py base.docx SKILL_PATH/assets/reference.docx
 ```
 
 ## Obsidian Image Embeds

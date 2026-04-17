@@ -111,7 +111,7 @@ def main() -> None:
             i += 1
 
     if not input_path.exists():
-        print(f"Error: {input_path} not found")
+        print(f"Error: {input_path} not found", file=sys.stderr)
         sys.exit(1)
 
     process_docx(input_path, major_font, minor_font)

@@ -17,7 +17,7 @@ from pathlib import Path
 
 try:
     from docx import Document
-    from docx.shared import Pt, RGBColor, Cm, Emu, Inches
+    from docx.shared import Pt, RGBColor, Cm
     from docx.enum.text import WD_LINE_SPACING
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
@@ -85,12 +85,15 @@ def set_border_bottom(style, color_hex: str = "D0D0D0",
         pBdr = OxmlElement('w:pBdr')
         pPr.append(pBdr)
 
-    bottom = OxmlElement('w:bottom')
+    bottom = pBdr.find(qn('w:bottom'))
+    if bottom is None:
+        bottom = OxmlElement('w:bottom')
+        pBdr.append(bottom)
+
     bottom.set(qn('w:val'), 'single')
     bottom.set(qn('w:sz'), size)
     bottom.set(qn('w:space'), space)
     bottom.set(qn('w:color'), color_hex)
-    pBdr.append(bottom)
 
 
 def set_border_left(style, color_hex: str, size: str = "18",
@@ -106,12 +109,15 @@ def set_border_left(style, color_hex: str, size: str = "18",
         pBdr = OxmlElement('w:pBdr')
         pPr.append(pBdr)
 
-    left = OxmlElement('w:left')
+    left = pBdr.find(qn('w:left'))
+    if left is None:
+        left = OxmlElement('w:left')
+        pBdr.append(left)
+
     left.set(qn('w:val'), 'single')
     left.set(qn('w:sz'), size)
     left.set(qn('w:space'), space)
     left.set(qn('w:color'), color_hex)
-    pBdr.append(left)
 
 
 def set_shading(style, color_hex: str) -> None:
