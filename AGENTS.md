@@ -6,17 +6,14 @@ Agent-facing documentation for the `ks-ai-coding-kit` repository.
 
 ```
 ks-ai-coding-kit/
-├── catalog.yaml       # Source of truth for all installable items
-├── install.py         # CLI installer (Python 3.10+, no required deps)
-├── steering/          # Reusable steering files (single .md files)
-├── skills/            # Agent Skills (each in its own subfolder with SKILL.md)
-├── hooks/             # Kiro hooks (.json files)
-├── prompts/           # System prompts grouped by target tool
-│   ├── claude-code/
-│   └── codex/
-└── docs/              # Project documentation
-    ├── specs/         # Format specifications and reference docs for building new items
-    └── IDEAS.md       # Future plans and ideas
+├── catalog.yaml           # Source of truth for all installable items
+├── install.py             # CLI installer (Python 3.10+, no required deps)
+├── agent-instructions/    # Reusable agent instruction files (single .md files)
+├── skills/                # Agent Skills (each in its own subfolder with SKILL.md)
+├── hooks/                 # Kiro hooks (.json files)
+└── docs/                  # Project documentation
+    ├── specs/             # Format specifications and reference docs for building new items
+    └── IDEAS.md           # Future plans and ideas
 ```
 
 ## Conventions
@@ -25,10 +22,9 @@ ks-ai-coding-kit/
 - **Installer** (`install.py`) reads the catalog and copies items to the correct location. Supports `list`, `install`, `uninstall`, `sync`, `--dry-run`, `--tool`, `--tag`, `--type`. Prompts interactively for `--tool` when omitted. No dependencies beyond Python 3.10+ (PyYAML optional).
 - **Install manifest** (`.install-manifest.json`) is a local, gitignored registry of installed items. Written automatically by `install`, and normally updated by `uninstall` when it removes an installed target. Used by `sync` to know which targets to update.
 - **Steering injection**: Skills can define a `steering-inject` key under `metadata` in their `SKILL.md` front-matter. On install, the installer appends this text to the tool's root steering file (`AGENTS.md` by default, `CLAUDE.md` for Claude Code). The injected block is wrapped in HTML comment markers (`<!-- ks-ai-coding-kit:<name> -->`) for clean uninstall.
-- **Steering files** are standalone Markdown files. They may use YAML front-matter for metadata (name, description, compatibility, tags).
+- **Agent instructions** are standalone Markdown files under `agent-instructions/`. They may use YAML front-matter for metadata (name, description, compatibility, tags). These are tool-agnostic — the installer places them in the right location for each tool.
 - **Skills** follow the Agent Skills open standard. Each skill lives in its own subdirectory under `skills/` and contains a `SKILL.md` as its entry point.
 - **Hooks** are JSON files following the Kiro hook schema (see `hooks/README.md`).
-- **Prompts** are grouped by target tool under `prompts/<tool-name>/`.
 
 ## Available Items
 
@@ -39,9 +35,9 @@ ks-ai-coding-kit/
 | `skills/ai-memory` | Kiro, Claude Code, Codex, Cursor | Persistent AI memory system — project-scoped and user-scoped memory files under `.agent-memory/` |
 | `skills/doc-convert` | Kiro, Claude Code, Codex, Cursor | Document conversion using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
 
-### Steering Files
+### Agent Instructions
 
-*No standalone steering files currently. The `ai-memory` steering shim has been superseded by the ai-memory skill.*
+*No standalone instruction files currently.*
 
 ### Hooks
 

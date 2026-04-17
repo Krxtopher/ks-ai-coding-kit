@@ -8,7 +8,7 @@ This repo is a collection of reusable configuration and instruction files for AI
 
 Each of these tools lets you customize agent behavior through files in your project. The specifics vary by tool, but the general idea is the same: you write instructions or configuration, and the AI agent follows them. This repo packages those customizations into installable, shareable extensions.
 
-If you're not familiar with these tools, the [README](README.md) has a background section and glossary that covers the key concepts (steering files, skills, hooks, prompts).
+If you're not familiar with these tools, the [README](README.md) has a background section and glossary that covers the key concepts (agent instructions, skills, hooks).
 
 ## Quick Start
 
@@ -23,17 +23,14 @@ If you're not familiar with these tools, the [README](README.md) has a backgroun
 
 ```
 ks-ai-coding-kit/
-├── catalog.yaml       # Source of truth for all installable items
-├── install.py         # CLI installer (Python 3.10+)
-├── steering/          # Standalone steering files (.md)
-├── skills/            # Agent Skills (each in its own subfolder)
-├── hooks/             # Kiro hooks (.json)
-├── prompts/           # System prompts grouped by tool
-│   ├── claude-code/
-│   └── codex/
-└── docs/              # Project documentation
-    ├── specs/         # Format specifications and reference docs
-    └── IDEAS.md       # Future plans and ideas
+├── catalog.yaml           # Source of truth for all installable items
+├── install.py             # CLI installer (Python 3.10+)
+├── agent-instructions/    # Reusable agent instruction files (.md)
+├── skills/                # Agent Skills (each in its own subfolder)
+├── hooks/                 # Kiro hooks (.json)
+└── docs/                  # Project documentation
+    ├── specs/             # Format specifications and reference docs
+    └── IDEAS.md           # Future plans and ideas
 ```
 
 ## Adding a New Extension
@@ -57,15 +54,14 @@ Instructions for the agent go here.
 
 The `name` field must be lowercase, use hyphens only, and match the directory name.
 
-**Steering file** — A Markdown document that gives the AI agent standing instructions for a project (coding standards, architectural context, workflow rules). These are standalone files under `steering/`. Can include YAML front-matter for metadata:
+**Agent instruction file** — A Markdown document that gives the AI agent standing instructions for a project (coding standards, architectural context, workflow rules). These are standalone files under `agent-instructions/`. Can include YAML front-matter for metadata:
 
 ```yaml
 ---
-name: My Steering File
+name: My Instruction File
 description: What guidance this provides
-compatibility: Kiro IDE
+compatibility: Kiro IDE, Claude Code, Codex, Cursor
 tags: [relevant, tags]
-inclusion: auto
 ---
 ```
 
@@ -87,7 +83,7 @@ inclusion: auto
 }
 ```
 
-**Prompt** — A tool-specific system prompt or custom instruction file. Different AI coding tools look for these in different places (e.g., `CLAUDE.md` for Claude Code, `AGENTS.md` for Codex). Place these under `prompts/<tool-name>/`.
+**Prompt** — A tool-specific system prompt or custom instruction file. Different AI coding tools look for these in different places (e.g., `CLAUDE.md` for Claude Code, `AGENTS.md` for Codex). Place these under `agent-instructions/`.
 
 ### 2. Add a Catalog Entry
 
@@ -95,7 +91,7 @@ Every installable item must have an entry in `catalog.yaml`. Here's the structur
 
 ```yaml
 - name: my-extension
-  type: skill | steering | hook | prompt
+  type: skill | instruction | hook
   source: path/to/source
   description: Clear, concise description
   tags: [relevant, tags]

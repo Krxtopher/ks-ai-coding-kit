@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """KS AI Coding Kit installer.
 
-A catalog-driven CLI that installs steering files, hooks, skills,
-and prompts into the correct location for your AI coding tool.
+A catalog-driven CLI that installs agent instructions, hooks, skills,
+and other extensions into the correct location for your AI coding tool.
 
 Usage:
     python install.py list
@@ -762,7 +762,7 @@ def build_parser() -> argparse.ArgumentParser:
     # list
     ls = sub.add_parser("list", help="List available extensions")
     ls.add_argument("--tag", help="Filter by tag")
-    ls.add_argument("--type", dest="item_type", help="Filter by type (steering, hook, skill, prompt)")
+    ls.add_argument("--type", dest="item_type", help="Filter by type (instruction, hook, skill)")
     ls.add_argument("--tool", help="Filter by compatible tool")
 
     # install

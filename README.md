@@ -1,6 +1,6 @@
 # KS AI Coding Kit
 
-A curated collection of reusable extensions for AI coding tools — steering files, agent skills, hooks, and system prompts.
+A curated collection of reusable extensions for AI coding tools — agent instructions, skills, hooks, and more.
 
 ## Background
 
@@ -21,19 +21,26 @@ You don't need to use all of these tools. Each extension declares which tools it
 
 If you're new to AI coding assistants, here's a quick glossary of the extension types in this repo:
 
-- **Steering files** — Markdown documents that give the AI agent standing instructions (coding standards, project context, workflows). Think of them as a persistent system prompt scoped to your project.
+- **Agent instructions** — Markdown documents that give the AI agent standing instructions (coding standards, project context, workflows). Think of them as a persistent system prompt scoped to your project. Different tools use different names for this concept:
+
+  | Tool | What They Call It | File / Location |
+  |------|-------------------|-----------------|
+  | Kiro | Steering files | `AGENTS.md` in project root or `.kiro/steering/*.md` |
+  | Claude Code | Project instructions | `CLAUDE.md` in project root |
+  | Codex | Agent instructions | `AGENTS.md` in project root |
+  | GitHub Copilot | Custom instructions | `.github/copilot-instructions.md` |
+  | Cursor | Rules | `.cursorrules` or `.cursor/rules/*.md` |
+
 - **Skills** — Multi-file packages that teach the agent a specific capability (e.g., managing a memory system). A skill includes a `SKILL.md` entry point with metadata and instructions, plus optional scripts and reference docs.
 - **Hooks** — Event-driven automations for Kiro IDE. A hook listens for an IDE event (file saved, command about to run, etc.) and triggers an action — either a shell command or a follow-up prompt to the agent.
-- **Prompts** — Tool-specific system prompts or custom instruction files (e.g., a `CLAUDE.md` for Claude Code).
 
 ## What's Here
 
 | Directory | What It Contains | Target Tools |
 |-----------|-----------------|--------------|
-| `steering/` | Reusable steering/instruction files | Kiro IDE |
+| `agent-instructions/` | Reusable instruction files for AI agents | All tools |
 | `skills/` | Agent Skills (multi-file skill packages) | Kiro IDE, Claude Code, Codex, Cursor |
 | `hooks/` | Agent hooks triggered by IDE events | Kiro IDE |
-| `prompts/` | System prompts and custom instructions | Claude Code, Codex, others |
 
 ## Available Extensions
 
@@ -44,7 +51,7 @@ If you're new to AI coding assistants, here's a quick glossary of the extension 
 | [`ai-memory`](skills/ai-memory/SKILL.md) | Persistent AI memory system with project-scoped and user-scoped memory files for retaining context across conversations. Works with Kiro, Claude Code, Codex, and Cursor. |
 | [`doc-convert`](skills/doc-convert/SKILL.md) | Convert documents between formats using pandoc. Ships with a styled Word reference template for polished Markdown-to-DOCX output. Works with Kiro, Claude Code, Codex, and Cursor. |
 
-### Steering Files
+### Agent Instructions
 
 | File | Description |
 |------|-------------|
@@ -162,11 +169,11 @@ The injected text is wrapped in HTML comment markers so it can be cleanly remove
 
 You can also copy files directly:
 
-- **Kiro steering** → `.kiro/steering/` in your workspace
+- **Kiro instructions** → `.kiro/steering/` in your workspace
 - **Kiro skills** → `.kiro/skills/` in your workspace
 - **Kiro hooks** → `.kiro/hooks/` in your workspace
-- **Claude Code prompts** → `CLAUDE.md` in your project root
-- **Codex prompts** → `AGENTS.md` or `codex.md` in your project root
+- **Claude Code instructions** → `CLAUDE.md` in your project root
+- **Codex instructions** → `AGENTS.md` or `codex.md` in your project root
 
 ## Contributing
 

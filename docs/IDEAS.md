@@ -8,7 +8,6 @@ The catalog-driven installer is live. See `install.py` and `catalog.yaml` at the
 
 ### Remaining Ideas
 
-- **Symlink mode** (`--link`) for "live" updates instead of copying
 - **Automated README generation** from `catalog.yaml` metadata
 - **Packaging** as a pip-installable CLI (`ai-ext`) for easier distribution
 
