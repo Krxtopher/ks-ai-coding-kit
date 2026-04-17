@@ -22,6 +22,7 @@ Pipe directly to pandoc:
       pandoc -f markdown -o output.docx --reference-doc=reference.docx
 """
 
+import argparse
 import re
 import sys
 from pathlib import Path
@@ -80,7 +81,7 @@ def convert_obsidian_image(match: re.Match, image_dir: str | None = None) -> str
 
     result = f'![{alt}]({src})'
     if attrs:
-        result += attrs
+        result += f' {attrs}'
 
     return result
 
@@ -94,30 +95,23 @@ def preprocess(text: str, image_dir: str | None = None) -> str:
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
-        print(__doc__)
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Preprocess Obsidian-style image embeds into standard Markdown."
+    )
+    parser.add_argument("input", type=Path, help="Input Markdown file")
+    parser.add_argument(
+        "--image-dir", type=str, default=None,
+        help="Base directory to prepend to image paths"
+    )
+    parser.add_argument(
+        "-o", "--output", type=Path, default=None,
+        help="Output file (defaults to stdout)"
+    )
+    args = parser.parse_args()
 
-    if sys.argv[1] in ('-h', '--help'):
-        print(__doc__)
-        sys.exit(0)
-
-    input_path = Path(sys.argv[1])
-    image_dir: str | None = None
-    output_path: Path | None = None
-
-    # Parse args
-    args = sys.argv[2:]
-    i = 0
-    while i < len(args):
-        if args[i] == '--image-dir' and i + 1 < len(args):
-            image_dir = args[i + 1].rstrip('/')
-            i += 2
-        elif args[i] == '-o' and i + 1 < len(args):
-            output_path = Path(args[i + 1])
-            i += 2
-        else:
-            i += 1
+    input_path: Path = args.input
+    image_dir: str | None = args.image_dir.rstrip('/') if args.image_dir else None
+    output_path: Path | None = args.output
 
     if not input_path.exists():
         print(f"Error: {input_path} not found", file=sys.stderr)
