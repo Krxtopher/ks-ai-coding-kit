@@ -306,7 +306,7 @@ When building steering files for this repository, always note:
 Compatibility: Kiro IDE
 ```
 
-If a steering file's content is broadly applicable, consider also creating equivalent files for other tools under `prompts/`.
+If a steering file's content is broadly applicable, consider also creating equivalent files for other tools under `agent-instructions/`.
 
 ## Relationship to Other Kiro Features
 

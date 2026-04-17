@@ -18,6 +18,18 @@ items:
       codex: skills/ai-memory
       cursor: skills/ai-memory
 
+  - name: doc-convert
+    type: skill
+    source: skills/doc-convert
+    description: Convert documents between formats using pandoc with a styled Word reference template
+    tags: [pandoc, conversion, markdown, word, docx, html, pdf, documents]
+    compatibility: [kiro, claude-code, codex, cursor]
+    targets:
+      kiro: .kiro/skills/doc-convert
+      claude-code: .claude/skills/doc-convert
+      codex: skills/doc-convert
+      cursor: skills/doc-convert
+
   - name: shell-command-explainer
     type: hook
     source: hooks/shell-command-explainer.kiro.hook

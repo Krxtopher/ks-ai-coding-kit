@@ -7,7 +7,7 @@ description: >
 compatibility: Kiro IDE, Claude Code, Codex, Cursor
 metadata:
   author: ks-ai-coding-kit
-  version: "1.0"
+  version: "1.1"
   steering-inject: >
     ALWAYS activate the "ai-memory" skill. Start each conversation by silently retrieving your memories.
 ---
@@ -31,6 +31,7 @@ Use a simple heuristic: **if the memory would be useful to another developer on 
 | `.agent-memory/project/tasks.md` | Project | In-flight tasks, ongoing projects, and their current status |
 | `.agent-memory/user/preferences.md` | User | Personal preferences, workflow habits, tool choices, style preferences |
 | `.agent-memory/user/insights.md` | User | Personal technical insights not relevant to the team |
+| `.agent-memory/user/topics.md` | User | Rolling log of recent conversation topics for continuity across sessions |
 
 ## Reading Memories
 
@@ -51,6 +52,7 @@ Use this checklist to recognize when a memory write is needed:
 - **User states a preference or habit** → log it in `.agent-memory/user/preferences.md`
 - **A personal technical insight comes up** → log it in `.agent-memory/user/insights.md`
 - **Conversation is ending with unfinished work** → update task status in `.agent-memory/project/tasks.md`
+- **A new conversation topic comes up** → log it in `.agent-memory/user/topics.md` (see Conversation Topic Tracking below)
 
 ### Task Tracking
 
@@ -60,6 +62,24 @@ Task tracking is a core responsibility of this memory system. Follow these rules
 - **At the end of a conversation** where a task was worked on, update its status. Mark it `completed` if done, or update `Next steps` with enough context that a future session can resume without re-discovery.
 - **If a task spans multiple conversations**, the entry in `.agent-memory/project/tasks.md` is how you'll pick it back up. Include enough detail in `Context` and `Next steps` to make resumption seamless.
 - **Before your final response in a conversation**, review whether any tasks were started or progressed, and ensure `.agent-memory/project/tasks.md` is up to date. This is not optional.
+
+### Conversation Topic Tracking
+
+Not every conversation involves a task. The user might ask a question, discuss an idea, or explore a topic without any actionable outcome. These conversations still matter for continuity — the user may return later and expect you to remember what you were discussing.
+
+Track conversation topics in `.agent-memory/user/topics.md`. This file holds a short rolling log of recent topics, so you always know what was last discussed even if it wasn't task-related.
+
+**When to write:**
+- At the start of a conversation, once the topic is clear, log a one-line summary.
+- If the conversation shifts to a substantially different topic mid-session, log the new topic.
+- You don't need to log every minor tangent — just meaningful topic changes.
+
+**What to write:** A brief, natural description of the topic. Examples:
+- `2025-07-10` — Discussed pros and cons of DynamoDB single-table design
+- `2025-07-10` — Helped debug a CloudFormation stack rollback issue
+- `2025-07-11` — Chatted about whether to migrate from Jest to Vitest
+
+**Maintenance:** Keep only the 10 most recent entries. When adding a new one, drop the oldest if at the limit. This file should stay very short.
 
 ### General Guidelines
 
