@@ -11,6 +11,7 @@ Usage:
     python fix-theme-fonts.py <file.docx> --major "Font" --minor "Font"
 """
 
+import argparse
 import sys
 import zipfile
 import shutil
@@ -89,33 +90,27 @@ def process_docx(input_path: Path, major_font: str, minor_font: str) -> None:
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
-        print(__doc__)
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Fix theme fonts inside a DOCX reference template."
+    )
+    parser.add_argument("input", type=Path, help="DOCX file to modify (in place)")
+    parser.add_argument(
+        "--major", type=str, default=DEFAULT_MAJOR,
+        help=f"Major (heading) font (default: {DEFAULT_MAJOR})"
+    )
+    parser.add_argument(
+        "--minor", type=str, default=DEFAULT_MINOR,
+        help=f"Minor (body) font (default: {DEFAULT_MINOR})"
+    )
+    args = parser.parse_args()
 
-    input_path = Path(sys.argv[1])
-    major_font = DEFAULT_MAJOR
-    minor_font = DEFAULT_MINOR
-
-    # Simple arg parsing for --major and --minor
-    args = sys.argv[2:]
-    i = 0
-    while i < len(args):
-        if args[i] == '--major' and i + 1 < len(args):
-            major_font = args[i + 1]
-            i += 2
-        elif args[i] == '--minor' and i + 1 < len(args):
-            minor_font = args[i + 1]
-            i += 2
-        else:
-            i += 1
-
+    input_path: Path = args.input
     if not input_path.exists():
         print(f"Error: {input_path} not found", file=sys.stderr)
         sys.exit(1)
 
-    process_docx(input_path, major_font, minor_font)
-    print(f"Theme fonts updated: major={major_font}, minor={minor_font}")
+    process_docx(input_path, args.major, args.minor)
+    print(f"Theme fonts updated: major={args.major}, minor={args.minor}")
 
 
 if __name__ == "__main__":
