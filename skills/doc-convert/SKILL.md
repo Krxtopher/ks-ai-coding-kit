@@ -161,6 +161,41 @@ pandoc --print-default-data-file reference.docx > base.docx
 python SKILL_PATH/scripts/customize-reference.py base.docx assets/reference.docx
 ```
 
+## Obsidian Image Embeds
+
+Obsidian uses `![[image.png]]` syntax for image embeds, which pandoc doesn't understand natively. Use the bundled preprocessor to convert these to standard Markdown before passing to pandoc:
+
+```bash
+python SKILL_PATH/scripts/obsidian-img-preprocess.py input.md --image-dir attachments | \
+  pandoc -f markdown -o output.docx \
+    --reference-doc=SKILL_PATH/assets/reference.docx \
+    --lua-filter=SKILL_PATH/assets/docx-polish.lua
+python SKILL_PATH/scripts/fix-list-indent.py output.docx
+```
+
+The `--image-dir` flag specifies the folder containing images (e.g., `attachments`, `assets`, `media`). If omitted, image paths are used as-is from the Markdown source.
+
+Supported Obsidian syntax:
+
+| Obsidian Syntax | Converted To |
+|-----------------|-------------|
+| `![[image.png]]` | `![image.png](attachments/image.png)` |
+| `![[image.png\|alt text]]` | `![alt text](attachments/image.png)` |
+| `![[image.png\|600]]` | `![image.png](attachments/image.png){ width=600px }` |
+| `![[image.png\|800x400]]` | `![image.png](attachments/image.png){ width=800px height=400px }` |
+| `![[subfolder/img.png]]` | `![img.png](attachments/subfolder/img.png)` |
+
+Non-image embeds like `![[some-note]]` are left unchanged.
+
+You can also preprocess to a file instead of piping:
+
+```bash
+python SKILL_PATH/scripts/obsidian-img-preprocess.py input.md --image-dir attachments -o preprocessed.md
+pandoc preprocessed.md -o output.docx \
+  --reference-doc=SKILL_PATH/assets/reference.docx \
+  --lua-filter=SKILL_PATH/assets/docx-polish.lua
+```
+
 ## Advanced Options
 
 Pandoc has extensive options. Some useful ones:

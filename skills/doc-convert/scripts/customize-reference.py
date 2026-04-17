@@ -149,11 +149,11 @@ def customize(doc: Document) -> None:
     heading_configs = {
         'Heading 1': {
             'size': Pt(22), 'color': HEADING_COLOR, 'bold': True,
-            'before': Pt(28), 'after': Pt(10), 'border_bottom': True,
+            'before': None, 'after': Pt(10), 'border_bottom': False,
         },
         'Heading 2': {
             'size': Pt(17), 'color': HEADING_COLOR, 'bold': True,
-            'before': Pt(24), 'after': Pt(8), 'border_bottom': True,
+            'before': Pt(24), 'after': Pt(8), 'border_bottom': False,
         },
         'Heading 3': {
             'size': Pt(14), 'color': HEADING_COLOR, 'bold': True,
@@ -269,6 +269,46 @@ def customize(doc: Document) -> None:
             continue
 
 
+def _fix_theme_fonts(docx_path: Path, major_font: str, minor_font: str) -> None:
+    """Patch the theme XML inside a DOCX to set major/minor fonts.
+
+    Pandoc's DOCX writer uses theme fonts for headings, ignoring style-level
+    font overrides. This ensures the theme matches our chosen fonts.
+    """
+    import zipfile
+    import shutil
+    import tempfile
+    from xml.etree import ElementTree as ET
+
+    a_ns = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        tmp_copy = tmp / "work.docx"
+        shutil.copy2(docx_path, tmp_copy)
+        tmp_out = tmp / "output.docx"
+
+        with zipfile.ZipFile(tmp_copy, 'r') as zin:
+            with zipfile.ZipFile(tmp_out, 'w', zipfile.ZIP_DEFLATED) as zout:
+                for item in zin.infolist():
+                    data = zin.read(item.filename)
+                    if 'theme' in item.filename.lower() and item.filename.endswith('.xml'):
+                        root = ET.fromstring(data.decode('utf-8'))
+                        for fs in root.iter(f'{{{a_ns}}}fontScheme'):
+                            for tag, font in [('majorFont', major_font),
+                                              ('minorFont', minor_font)]:
+                                el = fs.find(f'{{{a_ns}}}{tag}')
+                                if el is not None:
+                                    latin = el.find(f'{{{a_ns}}}latin')
+                                    if latin is not None:
+                                        latin.set('typeface', font)
+                        data = ET.tostring(root, encoding='unicode',
+                                           xml_declaration=True).encode('utf-8')
+                    zout.writestr(item, data)
+
+        shutil.copy2(tmp_out, docx_path)
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         print(__doc__)
@@ -284,6 +324,11 @@ def main() -> None:
     doc = Document(str(input_path))
     customize(doc)
     doc.save(str(output_path))
+
+    # Also fix the theme fonts inside the DOCX (pandoc uses theme fonts
+    # for headings, ignoring style-level overrides)
+    _fix_theme_fonts(output_path, HEADING_FONT, BODY_FONT)
+
     print(f"Customized reference document saved to {output_path}")
 
 

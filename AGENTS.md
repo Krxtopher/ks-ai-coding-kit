@@ -9,7 +9,7 @@ ks-ai-coding-kit/
 ├── catalog.yaml       # Source of truth for all installable items
 ├── install.py         # CLI installer (Python 3.10+, no required deps)
 ├── steering/          # Reusable steering files (single .md files)
-├── skills/            # Kiro Agent Skills (each in its own subfolder with SKILL.md)
+├── skills/            # Agent Skills (each in its own subfolder with SKILL.md)
 ├── hooks/             # Kiro hooks (.json files)
 ├── prompts/           # System prompts grouped by target tool
 │   ├── claude-code/
@@ -26,7 +26,7 @@ ks-ai-coding-kit/
 - **Install manifest** (`.install-manifest.json`) is a local, gitignored registry of installed items. Written automatically by `install`, and normally updated by `uninstall` when it removes an installed target. Used by `sync` to know which targets to update.
 - **Steering injection**: Skills can define a `steering-inject` key under `metadata` in their `SKILL.md` front-matter. On install, the installer appends this text to the tool's root steering file (`AGENTS.md` by default, `CLAUDE.md` for Claude Code). The injected block is wrapped in HTML comment markers (`<!-- ks-ai-coding-kit:<name> -->`) for clean uninstall.
 - **Steering files** are standalone Markdown files. They may use YAML front-matter for metadata (name, description, compatibility, tags).
-- **Skills** follow the Kiro Agent Skills spec. Each skill lives in its own subdirectory under `skills/` and contains a `SKILL.md` as its entry point.
+- **Skills** follow the Agent Skills open standard. Each skill lives in its own subdirectory under `skills/` and contains a `SKILL.md` as its entry point.
 - **Hooks** are JSON files following the Kiro hook schema (see `hooks/README.md`).
 - **Prompts** are grouped by target tool under `prompts/<tool-name>/`.
 
