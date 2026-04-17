@@ -57,10 +57,7 @@ def convert_obsidian_image(match: re.Match, image_dir: str | None = None) -> str
 
     # Build the image source path
     filename = Path(file_path).name
-    if image_dir:
-        src = f"{image_dir}/{file_path}" if '/' in file_path else f"{image_dir}/{file_path}"
-    else:
-        src = file_path
+    src = (Path(image_dir) / file_path).as_posix() if image_dir else file_path
 
     # Determine alt text and optional dimensions
     alt = filename
@@ -97,9 +94,13 @@ def preprocess(text: str, image_dir: str | None = None) -> str:
 
 
 def main() -> None:
-    if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'):
+    if len(sys.argv) < 2:
         print(__doc__)
-        sys.exit(0 if sys.argv[1:] == ['--help'] else 1)
+        sys.exit(1)
+
+    if sys.argv[1] in ('-h', '--help'):
+        print(__doc__)
+        sys.exit(0)
 
     input_path = Path(sys.argv[1])
     image_dir: str | None = None

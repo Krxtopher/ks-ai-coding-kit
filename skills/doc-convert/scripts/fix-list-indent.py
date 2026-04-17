@@ -5,8 +5,6 @@ Pandoc hardcodes list indentation at ~720 twips per level, which produces
 overly deep nesting. This script modifies the numbering definitions inside
 the DOCX to use tighter indentation (~240 twips per level, roughly 1/3).
 
-Requires: python-docx (pip install python-docx)
-
 Usage:
     python fix-list-indent.py <file.docx>              # modifies in place
     python fix-list-indent.py <input.docx> <output.docx>

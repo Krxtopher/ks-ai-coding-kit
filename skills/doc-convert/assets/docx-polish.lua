@@ -4,7 +4,8 @@
 -- Features:
 --   1. Code blocks: light gray background (#F6F6F6) with amber left border
 --   2. Inline code: light gray character shading
---   3. Nested lists: reduced indentation (~1/3 of pandoc default)
+--   3. Nested list indentation is handled by the post-processing pipeline
+--      (not by the active filters returned from this file)
 --
 -- Usage:
 --   pandoc input.md -o output.docx \
