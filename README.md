@@ -93,16 +93,7 @@ Which tool are you installing 'ai-memory' for?
   3) codex
   4) cursor
 Enter choice: 1
-How should the extension be installed?
-  1) copy
-  2) symlink (see warning below)
-
-⚠ Symlink mode is not supported by Kiro (skills installed as symlinks
-won't be discovered). Compatibility with other tools is unverified —
-use symlinks at your own risk. Prefer 'copy' mode unless you are
-actively developing this extension.
-Enter choice: 1
-✓ Installed 'ai-memory' (copy) → /Users/you/my-project/.kiro/skills/ai-memory
+✓ Installed 'ai-memory' → /Users/you/my-project/.kiro/skills/ai-memory
   ↳ Injected steering into /Users/you/my-project/AGENTS.md
 ```
 
@@ -110,15 +101,7 @@ If an item only supports one tool, that step is skipped automatically:
 
 ```
 Only one compatible tool: kiro
-How should the extension be installed?
-  1) copy
-  2) symlink (see warning below)
-
-⚠ Symlink mode is NOT supported by kiro. Extensions installed as
-symlinks will not be discovered. Prefer 'copy' mode unless you are
-actively developing this extension.
-Enter choice: 2
-✓ Installed 'shell-command-explainer' (symlink) → /Users/you/my-project/.kiro/hooks/shell-command-explainer.kiro.hook
+✓ Installed 'shell-command-explainer' → /Users/you/my-project/.kiro/hooks/shell-command-explainer.kiro.hook
 ```
 
 Uninstall works the same way — omit `--tool` and you'll be prompted:
@@ -129,24 +112,18 @@ python install.py uninstall ai-memory --dest ~/my-project
 
 ### Advanced Usage with Flags
 
-For scripting or CI, you can skip the prompts entirely by passing `--tool` and `--mode` directly:
+For scripting or CI, you can skip the prompts entirely by passing `--tool` directly:
 
 ```bash
-# Install as a copy (recommended)
-python install.py install ai-memory --dest /path/to/project --tool kiro --mode copy
-
-# Install as a symlink (see warning below)
-python install.py install ai-memory --dest /path/to/project --tool claude-code --mode symlink
+# Install
+python install.py install ai-memory --dest /path/to/project --tool kiro
 
 # Preview what would happen without making changes
-python install.py install ai-memory --dest /path/to/project --tool kiro --mode copy --dry-run
+python install.py install ai-memory --dest /path/to/project --tool kiro --dry-run
 
 # Uninstall
 python install.py uninstall ai-memory --dest /path/to/project --tool kiro
 ```
-
-> [!WARNING]
-> **Symlink mode caveat:** Symlink installs are **known not to work with Kiro** — skills installed as symlinks won't be discovered by the IDE. Compatibility with other tools (Claude Code, Codex, Cursor) is unverified. Prefer `copy` mode for all normal use. Symlinks are only useful if you're actively developing an extension in this repo and want live edits reflected without re-copying — but even then, consider using `python install.py sync` instead.
 
 ### Syncing Updates
 
@@ -170,9 +147,6 @@ This means your workflow for making improvements is:
 1. Edit the extension in this repo
 2. Run `python install.py sync`
 3. All workspaces get the updated files
-
-> [!TIP]
-> Use `sync` instead of symlinks to keep a single source of truth. You get the same "edit once, update everywhere" benefit without the tool compatibility issues that symlinks introduce.
 
 ### Steering Injection
 

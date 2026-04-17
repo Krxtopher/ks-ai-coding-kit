@@ -141,7 +141,7 @@ After making changes, verify the installer still works:
 python install.py list
 
 # Dry-run install to a temp directory
-python install.py install <name> --dest /tmp/test-project --tool kiro --mode copy --dry-run
+python install.py install <name> --dest /tmp/test-project --tool kiro --dry-run
 ```
 
 ## Documentation
