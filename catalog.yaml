@@ -30,6 +30,30 @@ items:
       codex: skills/doc-convert
       cursor: skills/doc-convert
 
+  - name: current-time
+    type: skill
+    source: skills/current-time
+    description: Looks up the current date and time in both local time and UTC, accurate to the second
+    tags: [time, date, clock, timezone, utc]
+    compatibility: [kiro, claude-code, codex, cursor]
+    targets:
+      kiro: .kiro/skills/current-time
+      claude-code: .claude/skills/current-time
+      codex: skills/current-time
+      cursor: skills/current-time
+
+  - name: image-describe
+    type: skill
+    source: skills/image-describe
+    description: Analyze images from the workspace using Bedrock vision models and extract technical metadata
+    tags: [image, vision, describe, screenshot, diagram, photo, bedrock, nova]
+    compatibility: [kiro, claude-code, codex, cursor]
+    targets:
+      kiro: .kiro/skills/image-describe
+      claude-code: .claude/skills/image-describe
+      codex: skills/image-describe
+      cursor: skills/image-describe
+
   - name: shell-command-explainer
     type: hook
     source: hooks/shell-command-explainer.kiro.hook

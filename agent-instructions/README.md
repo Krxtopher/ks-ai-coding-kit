@@ -43,4 +43,4 @@ Or copy files manually to the appropriate location for your tool (see the table 
 
 ## Contents
 
-*No standalone instruction files yet.*
+No agent instructions are currently available. All capabilities have been migrated to [skills](../skills/).

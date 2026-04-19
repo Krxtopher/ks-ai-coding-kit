@@ -9,7 +9,9 @@ Reusable extensions for AI coding tools — skills, hooks, and agent instruction
 | Name | Description | Compatibility |
 |------|-------------|---------------|
 | [ai-memory](skills/ai-memory/SKILL.md) | Persistent memory across conversations — project-scoped and user-scoped | Kiro, Claude Code, Codex, Cursor |
+| [current-time](skills/current-time/SKILL.md) | Looks up the current date and time in local and UTC, accurate to the second | Kiro, Claude Code, Codex, Cursor |
 | [doc-convert](skills/doc-convert/SKILL.md) | Document conversion via pandoc with a styled Word template | Kiro, Claude Code, Codex, Cursor |
+| [image-describe](skills/image-describe/SKILL.md) | Analyze images using Bedrock vision models — returns AI description plus technical metadata | Kiro, Claude Code, Codex, Cursor |
 
 ### Hooks
 
@@ -19,7 +21,7 @@ Reusable extensions for AI coding tools — skills, hooks, and agent instruction
 
 ### Agent Instructions
 
-Reusable instruction sets — coding standards, project context, workflows — designed to be added to your project's root steering file (`AGENTS.md`, `CLAUDE.md`, etc.). *(None published yet — contributions welcome!)*
+Reusable instruction sets — coding standards, project context, workflows — designed to be added to your project's root steering file (`AGENTS.md`, `CLAUDE.md`, etc.). No agent instructions are currently available — all capabilities have been migrated to skills.
 
 ## Quick Start
 
