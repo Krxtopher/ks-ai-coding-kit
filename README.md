@@ -73,7 +73,7 @@ A few things happen automatically:
 
 | Content Type | Kiro | Claude Code | Codex / Cursor |
 |-------------|------|-------------|----------------|
-| Skills | `.kiro/skills/<name>` | `.claude/skills/<name>` | `skills/<name>` |
+| Skills | `.kiro/skills/<name>` | `.claude/skills/<name>` | `.agents/skills/<name>` |
 | Hooks | `.kiro/hooks/<name>` | — | — |
 | Instructions | `.kiro/steering/` | `CLAUDE.md` | `AGENTS.md` |
 

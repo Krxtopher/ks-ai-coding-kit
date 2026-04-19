@@ -33,15 +33,15 @@ Use GitHub-flavored Markdown features when appropriate, including alerts/admonit
 
 ## Documenting Agent Skills
 
-Agent Skills (e.g. `.agents/skills/`) must be documented in a dedicated `## Agent Skills` section in `AGENTS.md`, separate from the `## Scripts` section.
+Agent Skills (e.g. `.agents/skills/`) must be documented in the existing skills section or table in `AGENTS.md` and `README.md`. Follow the structure already used by each file rather than requiring a specific heading level or section name.
 
 For each skill, include only:
 - The skill name (from the `name` field in the skill's `SKILL.md` front-matter)
 - The skill description (from the `description` field in the skill's `SKILL.md` front-matter)
 
-Do not document a skill's internal scripts, usage details, or implementation in `AGENTS.md` or `README.md`. The skill's own `SKILL.md` is the authoritative source for that information. If a skill's scripts are currently documented under `## Scripts`, remove those entries and replace them with a summary entry in `## Agent Skills`.
+Do not document a skill's internal scripts, usage details, or implementation in `AGENTS.md` or `README.md`. The skill's own `SKILL.md` is the authoritative source for that information. If a skill's scripts are currently documented alongside other repository documentation, replace those entries with a brief skill summary in the existing skills section or table.
 
-Both `AGENTS.md` and `README.md` should include a `## Agent Skills` section listing each skill's name and description. Keep the tone consistent with each file's style — concise and direct in `AGENTS.md`, conversational in `README.md`.
+Both `AGENTS.md` and `README.md` should list each skill's name and description in their skills section or table. Keep the tone consistent with each file's style — concise and direct in `AGENTS.md`, conversational in `README.md`.
 
 ## Important
 

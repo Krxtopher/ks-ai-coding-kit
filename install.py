@@ -378,6 +378,7 @@ def _add_manifest_entry(
     dest: Path,
     tool: str,
     target: str,
+    mode: str = "copy",
 ) -> None:
     """Record an installation in the manifest, replacing any existing entry
     for the same (name, dest, tool) combination."""
@@ -392,6 +393,7 @@ def _add_manifest_entry(
         "dest": str(dest),
         "tool": tool,
         "target": target,
+        "mode": mode,
     })
     _save_manifest(repo_root, entries)
 
@@ -543,20 +545,25 @@ def cmd_install(
         sys.exit(1)
 
     if target_spec.mode == "append":
-        written = _install_append(item, src=src, dst=dst, dry_run=dry_run)
+        _install_append(item, src=src, dst=dst, dry_run=dry_run)
     else:
         written = _install_copy(item, src=src, dst=dst, dry_run=dry_run)
+        if not written:
+            return
 
-    if not dry_run and written:
+    if not dry_run:
         # Inject steering text into the tool's root steering file if configured.
+        # This is idempotent — skips if already present.
         inject_steering(dest, tool, item, dry_run=False)
 
         # Record in the local install manifest (including the resolved target path).
+        # Always record so the manifest stays consistent even if the content was
+        # already present (e.g. re-running install after manual manifest deletion).
         _add_manifest_entry(
             repo_root, name=item.name, dest=dest, tool=tool,
-            target=str(dst),
+            target=str(dst), mode=target_spec.mode,
         )
-    elif dry_run:
+    else:
         inject_steering(dest, tool, item, dry_run=True)
 
 
@@ -615,12 +622,8 @@ def _install_append(
     src: Path,
     dst: Path,
     dry_run: bool,
-) -> bool:
-    """Install by appending source content to destination file, wrapped in markers.
-
-    Returns ``True`` if the content was (or would be) written, ``False`` if
-    the item was already present and the operation was skipped.
-    """
+) -> None:
+    """Install by appending source content to destination file, wrapped in markers."""
     marker_open = _append_marker_open(item.name)
     marker_close = _append_marker_close(item.name)
 
@@ -630,26 +633,30 @@ def _install_append(
         sys.exit(1)
     content = src.read_text()
 
+    # Guard against target being a directory.
+    if dst.exists() and dst.is_dir():
+        print(f"Error: cannot append to directory target {dst}.", file=sys.stderr)
+        sys.exit(1)
+
     # Don't double-append.
     if dst.exists() and marker_open in dst.read_text():
         if dry_run:
             print(f"[dry-run] '{item.name}' already appended to {dst}, would skip.")
         else:
             print(f"'{item.name}' already appended to {dst}, skipping.")
-        return False
+        return
 
     block = f"\n{marker_open}\n{content}\n{marker_close}\n"
 
     if dry_run:
         print(f"[dry-run] Would append '{item.name}' to {dst}")
-        return True
+        return
 
     dst.parent.mkdir(parents=True, exist_ok=True)
     with dst.open("a") as f:
         f.write(block)
 
     print(f"✓ Installed '{item.name}' → {dst} (appended)")
-    return True
 
 
 def cmd_uninstall(
@@ -668,7 +675,18 @@ def cmd_uninstall(
 
     dst = dest / target_spec.file
 
-    if target_spec.mode == "append":
+    # Determine the install mode. Prefer the mode stored in the manifest
+    # (source of truth for how the item was originally installed). Fall
+    # back to the current catalog spec for older manifest entries.
+    entries = _load_manifest(repo_root)
+    manifest_entry = next(
+        (e for e in entries
+         if e["name"] == item.name and e["dest"] == str(dest) and e["tool"] == tool),
+        None,
+    )
+    mode = manifest_entry.get("mode", target_spec.mode) if manifest_entry else target_spec.mode
+
+    if mode == "append":
         _uninstall_append(item, repo_root=repo_root, dst=dst, dest=dest, tool=tool, dry_run=dry_run)
     else:
         _uninstall_copy(item, repo_root=repo_root, dst=dst, dest=dest, tool=tool, dry_run=dry_run)
@@ -732,7 +750,19 @@ def _uninstall_append(
             _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
         return
 
-    content = dst.read_text()
+    if dst.is_dir():
+        print(f"Cannot uninstall '{item.name}' from {dst}: target path is a directory, not a file.")
+        if not dry_run:
+            _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
+        return
+
+    try:
+        content = dst.read_text()
+    except OSError as exc:
+        print(f"Cannot uninstall '{item.name}' from {dst}: failed to read target file ({exc}).")
+        if not dry_run:
+            _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
+        return
     if marker_open not in content:
         print(f"'{item.name}' is not installed in {dst}.")
         if not dry_run:
@@ -794,6 +824,12 @@ def _sync_append(item: CatalogItem, *, src: Path, dst: Path) -> None:
     block = f"\n{marker_open}\n{content}\n{marker_close}\n"
 
     if dst.exists():
+        if dst.is_dir():
+            print(
+                f"Skipping '{item.name}': append target is a directory, "
+                f"not a file: {dst}",
+            )
+            return
         existing = dst.read_text()
         # Remove old block if present.
         if marker_open in existing:
@@ -888,15 +924,20 @@ def cmd_sync(
             skipped += 1
             continue
 
+        # Determine the install mode. Prefer the mode stored in the manifest
+        # (source of truth for how the item was originally installed). Fall
+        # back to the current catalog spec for older manifest entries.
+        mode = entry.get("mode", target_spec.mode)
+
         if dry_run:
-            if target_spec.mode == "append":
+            if mode == "append":
                 print(f"[dry-run] Would re-append '{item.name}' in {dst}")
             else:
                 print(f"[dry-run] Would copy '{item.name}' → {dst}")
             would_sync += 1
             continue
 
-        if target_spec.mode == "append":
+        if mode == "append":
             _sync_append(item, src=src, dst=dst)
         else:
             _sync_copy(item, src=src, dst=dst)
