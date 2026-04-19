@@ -66,6 +66,7 @@ A few things happen automatically:
 
 - **Steering injection** — Some skills (like `agent-memory`) need a one-liner in your project's agent-facing docs to activate at conversation start. The installer appends it on install and removes it on uninstall. For tools like Claude Code that prefer `CLAUDE.md` over `AGENTS.md`, the installer automatically picks the right file — it checks a prioritized list and uses the first one that exists in your project.
 - **Prioritized file targets** — Append-mode targets and steering injection both support a prioritized fallback list. For example, Claude Code's append target is `[CLAUDE.md, AGENTS.md]` — the installer uses `CLAUDE.md` if it exists, otherwise falls back to `AGENTS.md`.
+- **Python dependencies** — Skills that include a `requirements.txt` will trigger a notice after install or sync with the exact `pip install -r` command to run. No packages are installed automatically.
 - **Dry runs** — Add `--dry-run` to any command to preview changes without writing anything.
 - **Manual install** — You can always copy files by hand. See the target paths in `catalog.yaml` or the tool-specific docs below.
 
