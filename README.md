@@ -21,7 +21,7 @@ Reusable extensions for AI coding tools — skills, hooks, and agent instruction
 
 ### Agent Instructions
 
-Reusable instruction sets — coding standards, project context, workflows — designed to be added to your project's root steering file (`AGENTS.md`, `CLAUDE.md`, etc.). No agent instructions are currently available — all capabilities have been migrated to skills.
+Reusable instruction sets — coding standards, project context, workflows — designed to be appended to your project's `AGENTS.md`. All major AI coding tools read this file natively.
 
 ## Quick Start
 
@@ -64,7 +64,7 @@ The installer reads `catalog.yaml` (the source of truth for all extensions) and 
 
 A few things happen automatically:
 
-- **Steering injection** — Some skills (like `agent-memory`) need a one-liner in your project's root instruction file (`AGENTS.md` or `CLAUDE.md`) to activate at conversation start. The installer appends it on install and removes it on uninstall.
+- **Steering injection** — Some skills (like `agent-memory`) need a one-liner in your project's `AGENTS.md` to activate at conversation start. The installer appends it on install and removes it on uninstall.
 - **Dry runs** — Add `--dry-run` to any command to preview changes without writing anything.
 - **Manual install** — You can always copy files by hand. See the target paths in `catalog.yaml` or the tool-specific docs below.
 
@@ -75,7 +75,7 @@ A few things happen automatically:
 |-------------|------|-------------|----------------|
 | Skills | `.kiro/skills/<name>` | `.claude/skills/<name>` | `.agents/skills/<name>` |
 | Hooks | `.kiro/hooks/<name>` | — | — |
-| Instructions | `.kiro/steering/` | `CLAUDE.md` | `AGENTS.md` |
+| Instructions | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` |
 
 </details>
 

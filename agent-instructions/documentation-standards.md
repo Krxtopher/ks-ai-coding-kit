@@ -1,6 +1,6 @@
 # Documentation Standards
 
-When a source file is created or modified, evaluate whether `README.md` files and `AGENTS.md` (or `CLAUDE.md`) files need to be updated.
+When a source file is created or modified, evaluate whether `README.md` files and `AGENTS.md` files need to be updated.
 
 ## When to Update
 
@@ -23,7 +23,7 @@ Skip documentation updates when a change:
 ## How to Update
 
 - `README.md` files — Conversational tone, aimed at human readers of varying skill levels. Explain what scripts do, how to use them, and any important notes.
-- `AGENTS.md` and `CLAUDE.md` files — Direct and concise, optimized for AI coding agents. Focus on structure, inputs/outputs, dependencies, and key behaviors.
+- `AGENTS.md` files — Direct and concise, optimized for AI coding agents. Focus on structure, inputs/outputs, dependencies, and key behaviors.
 
 Both types of files should stay in sync regarding which scripts and structures are documented, but the writing style differs as described above.
 

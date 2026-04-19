@@ -36,11 +36,7 @@ CATALOG_FILE = "catalog.yaml"
 MANIFEST_FILE = ".install-manifest.json"
 SKILL_ENTRY = "SKILL.md"
 
-# Steering injection: tool-specific root files for tools that don't use AGENTS.md.
-# Everything not listed here defaults to AGENTS.md.
-STEERING_ROOT_OVERRIDES: dict[str, str] = {
-    "claude-code": "CLAUDE.md",
-}
+# Steering injection: all tools use AGENTS.md as the root steering file.
 STEERING_ROOT_DEFAULT = "AGENTS.md"
 INJECT_PREFIX = "ks-ai-coding-kit"
 
@@ -420,7 +416,7 @@ def _remove_manifest_entry(
 
 def _steering_root_file(tool: str) -> str:
     """Return the root steering file path for a given tool."""
-    return STEERING_ROOT_OVERRIDES.get(tool, STEERING_ROOT_DEFAULT)
+    return STEERING_ROOT_DEFAULT
 
 
 def inject_steering(

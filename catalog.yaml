@@ -61,10 +61,10 @@ items:
   - name: documentation-standards
     type: instruction
     source: agent-instructions/documentation-standards.md
-    description: Guidelines for when and how to update README.md and agent-facing docs (AGENTS.md, CLAUDE.md)
+    description: Guidelines for when and how to update README.md and agent-facing docs
     compatibility: [kiro, claude-code, codex, cursor]
     targets:
-      kiro: .kiro/steering/documentation-standards.md
-      claude-code: { file: CLAUDE.md, mode: append }
+      kiro: { file: AGENTS.md, mode: append }
+      claude-code: { file: AGENTS.md, mode: append }
       codex: { file: AGENTS.md, mode: append }
-      cursor: .cursor/rules/documentation-standards.md
+      cursor: { file: AGENTS.md, mode: append }

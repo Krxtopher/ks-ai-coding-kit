@@ -83,7 +83,7 @@ tags: [relevant, tags]
 }
 ```
 
-**Prompt** — A tool-specific system prompt or custom instruction file. Different AI coding tools look for these in different places (e.g., `CLAUDE.md` for Claude Code, `AGENTS.md` for Codex). Place these under `agent-instructions/`.
+**Prompt** — A tool-specific system prompt or custom instruction file. Most AI coding tools read `AGENTS.md` at the repo root. Place these under `agent-instructions/`.
 
 ### 2. Add a Catalog Entry
 

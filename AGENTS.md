@@ -22,9 +22,9 @@ ks-ai-coding-kit/
 - **Installer** (`install.py`) reads the catalog and installs items to the correct location. Supports `list`, `install`, `uninstall`, `sync`, `--dry-run`, `--tool`, `--type`. Prompts interactively for `--tool` when omitted. No dependencies beyond Python 3.10+ (PyYAML optional).
 - **Install targets** can use two modes:
   - **copy** (default) — plain string target, e.g. `kiro: .kiro/skills/my-skill`. The source is copied to this path.
-  - **append** — object target, e.g. `claude-code: { file: CLAUDE.md, mode: append }`. The source content is appended to the target file as a paired HTML comment block: opening marker `<!-- ks-ai-coding-kit:append:<name> -->`, then the content, then closing marker `<!-- /ks-ai-coding-kit:append:<name> -->` for clean uninstall.
+  - **append** — object target, e.g. `codex: { file: AGENTS.md, mode: append }`. The source content is appended to the target file as a paired HTML comment block: opening marker `<!-- ks-ai-coding-kit:append:<name> -->`, then the content, then closing marker `<!-- /ks-ai-coding-kit:append:<name> -->` for clean uninstall.
 - **Install manifest** (`.install-manifest.json`) is a local, gitignored registry of installed items. Written automatically by `install`, and normally updated by `uninstall` when it removes an installed target. Used by `sync` to know which targets to update.
-- **Steering injection**: Skills can define a `steering-inject` key under `metadata` in their `SKILL.md` front-matter. On install, the installer appends this text to the tool's root steering file (`AGENTS.md` by default, `CLAUDE.md` for Claude Code). The injected block is wrapped in HTML comment markers (`<!-- ks-ai-coding-kit:<name> -->`) for clean uninstall.
+- **Steering injection**: Skills can define a `steering-inject` key under `metadata` in their `SKILL.md` front-matter. On install, the installer appends this text to `AGENTS.md` in the target project. The injected block is wrapped in HTML comment markers (`<!-- ks-ai-coding-kit:<name> -->`) for clean uninstall. All tools that this project targets (Kiro, Claude Code, Codex, Cursor) read `AGENTS.md`, so a single file serves all tools.
 - **Agent instructions** are standalone Markdown files under `agent-instructions/`. They may use YAML front-matter for metadata (name, description, compatibility, tags). These are tool-agnostic — the installer places them in the right location for each tool.
 - **Skills** follow the Agent Skills open standard. Each skill lives in its own subdirectory under `skills/` and contains a `SKILL.md` as its entry point.
 - **Hooks** are JSON files following the Kiro hook schema (see `hooks/README.md`).
@@ -44,7 +44,7 @@ ks-ai-coding-kit/
 
 | File | Compatibility | Description |
 |------|---------------|-------------|
-| `agent-instructions/documentation-standards.md` | Kiro, Claude Code, Codex, Cursor | Guidelines for when and how to update README.md and agent-facing docs (AGENTS.md, CLAUDE.md) |
+| `agent-instructions/documentation-standards.md` | Kiro, Claude Code, Codex, Cursor | Guidelines for when and how to update README.md and agent-facing docs |
 
 ### Hooks
 
