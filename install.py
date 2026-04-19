@@ -639,7 +639,13 @@ def remove_steering(
             return
 
         marker_close = f"<!-- /{INJECT_PREFIX}:{item.name} -->"
-        cleaned, _ = _remove_marked_block(content, marker_open, marker_close)
+        cleaned, n = _remove_marked_block(content, marker_open, marker_close)
+        if n == 0:
+            print(
+                f"  ↳ Warning: steering marker found in {root_file} but "
+                f"block could not be removed; file may be corrupted."
+            )
+            return
         cleaned = _normalize_trailing_blank_lines(cleaned)
         root_file.write_text(cleaned)
 
@@ -775,11 +781,11 @@ def _append_marker_close(name: str) -> str:
 
 
 def _validate_marker_name(name: str) -> None:
-    """Raise ValueError if *name* would break an HTML comment marker."""
-    if "--" in name or name.endswith("-"):
+    """Raise ValueError if *name* would break the generated HTML comment marker."""
+    if "--" in name:
         raise ValueError(
-            f"Item name {name!r} contains '--' or ends with '-' which is not "
-            f"safe inside HTML comment markers. Rename the catalog entry."
+            f"Item name {name!r} contains '--' which is not safe inside HTML "
+            f"comment markers. Rename the catalog entry."
         )
 
 
@@ -793,12 +799,14 @@ def _remove_marked_block(content: str, marker_open: str, marker_close: str) -> t
 
     Uses a pattern that refuses to match across block boundaries — the
     content between markers must not contain another opening HTML comment
-    of the same prefix.  Returns ``(cleaned_text, substitution_count)``.
+    of the same prefix.  Handles both ``\\n`` and ``\\r\\n`` line endings.
+    Returns ``(cleaned_text, substitution_count)``.
     """
+    nl = r"\r?\n"
     pattern = (
-        rf"\n?{re.escape(marker_open)}\n"
-        rf"(?:(?!<!-- {re.escape(INJECT_PREFIX)}).)*?\n"
-        rf"{re.escape(marker_close)}\n?"
+        rf"(?:{nl})?{re.escape(marker_open)}{nl}"
+        rf"(?:(?!<!-- {re.escape(INJECT_PREFIX)}).)*?{nl}"
+        rf"{re.escape(marker_close)}(?:{nl})?"
     )
     return re.subn(pattern, "", content, count=1, flags=re.DOTALL)
 
@@ -864,10 +872,14 @@ def _install_append(
 
     # Write to a temp file in the same directory and atomically replace,
     # so a crash mid-write can't corrupt the user's existing file.
+    # If replacing an existing file, carry forward its metadata so append
+    # does not unexpectedly change permissions/timestamps.
     fd, tmp_path = tempfile.mkstemp(dir=dst.parent, suffix=".tmp")
     try:
         with os.fdopen(fd, "w") as f:
             f.write(new_content)
+        if dst.exists():
+            shutil.copystat(dst, tmp_path, follow_symlinks=False)
         os.replace(tmp_path, dst)
     except BaseException:
         # Clean up the temp file on any failure.
@@ -990,6 +1002,12 @@ def _uninstall_append(
             _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
         return
 
+    if dst.is_symlink():
+        print(f"Cannot uninstall '{item.name}' from {dst}: target is a symlink.")
+        if not dry_run:
+            _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
+        return
+
     try:
         content = dst.read_text()
     except OSError as exc:
@@ -1077,6 +1095,11 @@ def _sync_append(item: CatalogItem, *, src: Path, dst: Path) -> None:
     block = f"{marker_open}\n{content}\n{marker_close}\n"
 
     if dst.exists():
+        if dst.is_symlink():
+            print(
+                f"Skipping '{item.name}': append target is a symlink: {dst}",
+            )
+            return
         if dst.is_dir():
             print(
                 f"Skipping '{item.name}': append target is a directory, "
