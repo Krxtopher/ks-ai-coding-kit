@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import sys
 from dataclasses import dataclass, field
@@ -202,15 +203,13 @@ class CatalogItem:
 
 def _read_skill_steering_inject(repo_root: Path, source: str) -> Optional[str]:
     """Read the steering-inject value from a skill's SKILL.md metadata."""
-    import re as _re
-
     skill_md = repo_root / source / SKILL_ENTRY
     if not skill_md.exists():
         return None
 
     text = skill_md.read_text()
     # Extract YAML front-matter between --- delimiters.
-    fm_match = _re.match(r"^---\s*\n(.+?)\n---", text, _re.DOTALL)
+    fm_match = re.match(r"^---\s*\n(.+?)\n---", text, re.DOTALL)
     if not fm_match:
         return None
 
@@ -292,6 +291,24 @@ def load_catalog(repo_root: Path) -> list[CatalogItem]:
         # For skills, read steering-inject from the SKILL.md metadata.
         if item.type == "skill":
             item.steering_inject = _read_skill_steering_inject(repo_root, item.source)
+
+        # Validate: an item must not combine steering-inject with an
+        # append-mode target that writes to the same steering root file.
+        # Both mechanisms append marked blocks to AGENTS.md and their
+        # marker namespaces could collide.
+        if item.steering_inject:
+            for tool_name, spec in item.targets.items():
+                if spec and spec.mode == "append" and spec.file == STEERING_ROOT_DEFAULT:
+                    print(
+                        f"Error: catalog entry '{item.name}' has both "
+                        f"steering-inject and an append-mode target to "
+                        f"{STEERING_ROOT_DEFAULT} (tool '{tool_name}'). "
+                        f"These two mechanisms would write overlapping "
+                        f"marked blocks to the same file. Use one or the other.",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+
         items.append(item)
     return items
 
@@ -461,8 +478,6 @@ def remove_steering(
     dry_run: bool = False,
 ) -> None:
     """Remove the injected steering block from the tool's root steering file."""
-    import re as _re
-
     if not item.steering_inject:
         return
 
@@ -480,8 +495,9 @@ def remove_steering(
         return
 
     marker_close = f"<!-- /{INJECT_PREFIX}:{item.name} -->"
-    pattern = rf"\n?{_re.escape(marker_open)}\n.*?\n{_re.escape(marker_close)}\n?"
-    cleaned = _re.sub(pattern, "", content, flags=_re.DOTALL)
+    pattern = rf"\n?{re.escape(marker_open)}\n.*?\n{re.escape(marker_close)}\n?"
+    cleaned = re.sub(pattern, "", content, flags=re.DOTALL)
+    cleaned = _normalize_trailing_blank_lines(cleaned)
     root_file.write_text(cleaned)
 
     print(f"  ↳ Removed steering from {root_file}")
@@ -612,6 +628,11 @@ def _append_marker_close(name: str) -> str:
     return f"<!-- /{INJECT_PREFIX}:append:{name} -->"
 
 
+def _normalize_trailing_blank_lines(text: str) -> str:
+    """Collapse runs of 3+ consecutive newlines down to 2 (one blank line)."""
+    return re.sub(r"\n{3,}", "\n\n", text)
+
+
 def _install_append(
     item: CatalogItem,
     *,
@@ -736,8 +757,6 @@ def _uninstall_append(
     dry_run: bool,
 ) -> None:
     """Uninstall an append-mode item by removing the marked block from the target file."""
-    import re as _re
-
     marker_open = _append_marker_open(item.name)
 
     if not dst.exists():
@@ -771,8 +790,9 @@ def _uninstall_append(
         return
 
     marker_close = _append_marker_close(item.name)
-    pattern = rf"\n?{_re.escape(marker_open)}\n.*?\n{_re.escape(marker_close)}\n?"
-    cleaned = _re.sub(pattern, "", content, flags=_re.DOTALL)
+    pattern = rf"\n?{re.escape(marker_open)}\n.*?\n{re.escape(marker_close)}\n?"
+    cleaned = re.sub(pattern, "", content, flags=re.DOTALL)
+    cleaned = _normalize_trailing_blank_lines(cleaned)
     dst.write_text(cleaned)
 
     print(f"✓ Uninstalled '{item.name}' (removed block from {dst})")
@@ -804,8 +824,6 @@ def _sync_copy(item: CatalogItem, *, src: Path, dst: Path) -> None:
 
 def _sync_append(item: CatalogItem, *, src: Path, dst: Path) -> None:
     """Sync an append-mode item by removing the old block and re-appending."""
-    import re as _re
-
     marker_open = _append_marker_open(item.name)
     marker_close = _append_marker_close(item.name)
 
@@ -829,8 +847,9 @@ def _sync_append(item: CatalogItem, *, src: Path, dst: Path) -> None:
         existing = dst.read_text()
         # Remove old block if present.
         if marker_open in existing:
-            pattern = rf"\n?{_re.escape(marker_open)}\n.*?\n{_re.escape(marker_close)}\n?"
-            existing = _re.sub(pattern, "", existing, flags=_re.DOTALL)
+            pattern = rf"\n?{re.escape(marker_open)}\n.*?\n{re.escape(marker_close)}\n?"
+            existing = re.sub(pattern, "", existing, flags=re.DOTALL)
+            existing = _normalize_trailing_blank_lines(existing)
             dst.write_text(existing)
     else:
         dst.parent.mkdir(parents=True, exist_ok=True)
