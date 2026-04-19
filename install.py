@@ -37,7 +37,7 @@ CATALOG_FILE = "catalog.yaml"
 MANIFEST_FILE = ".install-manifest.json"
 SKILL_ENTRY = "SKILL.md"
 
-# Steering injection: all tools use AGENTS.md as the root steering file.
+# Steering injection: default file when no steering-roots entry exists.
 STEERING_ROOT_DEFAULT = "AGENTS.md"
 INJECT_PREFIX = "ks-ai-coding-kit"
 
@@ -48,6 +48,27 @@ INJECT_PREFIX = "ks-ai-coding-kit"
 # Minimal YAML parser (stdlib-only fallback)
 # ---------------------------------------------------------------------------
 
+def _split_mapping_pairs(text: str) -> list[str]:
+    """Split an inline YAML mapping body on commas, respecting brackets.
+
+    For example, ``"file: [A, B], mode: append"`` yields
+    ``["file: [A, B]", "mode: append"]``.
+    """
+    pairs: list[str] = []
+    depth = 0
+    start = 0
+    for i, ch in enumerate(text):
+        if ch == "[":
+            depth += 1
+        elif ch == "]":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            pairs.append(text[start:i])
+            start = i + 1
+    pairs.append(text[start:])
+    return pairs
+
+
 def _parse_yaml_minimal(text: str) -> dict:
     """Parse the catalog YAML without PyYAML.
 
@@ -57,17 +78,39 @@ def _parse_yaml_minimal(text: str) -> dict:
     items: list[dict] = []
     current: dict | None = None
     in_targets = False
+    steering_roots: dict[str, str | list[str]] = {}
+    in_steering_roots = False
 
     for raw_line in text.splitlines():
         stripped = raw_line.strip()
         if not stripped or stripped.startswith("#"):
             continue
 
+        indent = len(raw_line) - len(raw_line.lstrip())
+
+        # Top-level "steering-roots:" key
+        if stripped == "steering-roots:" and indent == 0:
+            in_steering_roots = True
+            continue
+
+        if in_steering_roots:
+            if indent == 0:
+                in_steering_roots = False
+            else:
+                key, _, val = stripped.partition(":")
+                val = val.strip()
+                list_match = re.match(r"^\[(.+)\]$", val)
+                if list_match:
+                    steering_roots[key.strip()] = [
+                        v.strip().strip("'\"") for v in list_match.group(1).split(",")
+                    ]
+                else:
+                    steering_roots[key.strip()] = val.strip("'\"")
+                continue
+
         # Top-level "items:" key
         if stripped == "items:":
             continue
-
-        indent = len(raw_line) - len(raw_line.lstrip())
 
         # New list item at indent 2
         if raw_line.lstrip().startswith("- name:") and indent == 2:
@@ -96,12 +139,20 @@ def _parse_yaml_minimal(text: str) -> dict:
                 # Check for inline mapping: { file: ..., mode: ... }
                 if val.startswith("{") and val.endswith("}"):
                     inner = val[1:-1].strip()
-                    mapping: dict[str, str] = {}
-                    for pair in inner.split(","):
+                    mapping: dict[str, str | list[str]] = {}
+                    for pair in _split_mapping_pairs(inner):
                         pair = pair.strip()
                         if ":" in pair:
                             mk, _, mv = pair.partition(":")
-                            mapping[mk.strip()] = mv.strip().strip("'\"")
+                            mv = mv.strip().strip("'\"")
+                            # Support inline list: [A, B]
+                            list_m = re.match(r"^\[(.+)\]$", mv)
+                            if list_m:
+                                mapping[mk.strip()] = [
+                                    v.strip().strip("'\"") for v in list_m.group(1).split(",")
+                                ]
+                            else:
+                                mapping[mk.strip()] = mv
                     current["targets"][key.strip()] = mapping
                 else:
                     current["targets"][key.strip()] = val
@@ -126,7 +177,10 @@ def _parse_yaml_minimal(text: str) -> dict:
                 val = val[1:-1]
             current[key.strip()] = val
 
-    return {"items": items}
+    result: dict = {"items": items}
+    if steering_roots:
+        result["steering-roots"] = steering_roots
+    return result
 
 
 def load_yaml(path: Path) -> dict:
@@ -148,8 +202,13 @@ class TargetSpec:
     A target can be specified in the catalog as either:
       - A plain string (shorthand for ``{file: <path>, mode: copy}``)
       - A mapping with ``file`` and ``mode`` keys
+
+    The ``file`` field can be a single path string or a list of paths
+    representing a prioritized fallback chain.  When a list is given the
+    installer picks the first path that already exists in the destination,
+    falling back to the last entry if none exist.
     """
-    file: str
+    file: list[str]  # prioritized list; single-path targets are stored as [path]
     mode: str = "copy"  # "copy" or "append"
 
     @classmethod
@@ -161,7 +220,7 @@ class TargetSpec:
         if value is None:
             return None
         if isinstance(value, str):
-            return cls(file=value, mode="copy")
+            return cls(file=[value], mode="copy")
         if isinstance(value, dict):
             file_val = value.get("file")
             if file_val is None:
@@ -169,8 +228,35 @@ class TargetSpec:
             mode = value.get("mode", "copy")
             if mode not in ("copy", "append"):
                 raise ValueError(f"Invalid target mode '{mode}'. Must be 'copy' or 'append'.")
-            return cls(file=str(file_val), mode=mode)
+            # Normalize to a list for uniform handling.
+            if isinstance(file_val, str):
+                file_list = [file_val]
+            elif isinstance(file_val, list):
+                if not file_list_val_ok(file_val):
+                    raise ValueError("Target 'file' list must contain only non-empty strings.")
+                file_list = list(file_val)
+            else:
+                raise ValueError(f"Target 'file' must be a string or list of strings, got {type(file_val).__name__}.")
+            return cls(file=file_list, mode=mode)
         raise ValueError(f"Unexpected target value type: {type(value)}")
+
+    def resolve_file(self, dest: Path) -> str:
+        """Pick the best file from the prioritized list.
+
+        Returns the first path that already exists under *dest*, or the
+        last entry in the list as the default when none exist.
+        """
+        if len(self.file) == 1:
+            return self.file[0]
+        for candidate in self.file:
+            if (dest / candidate).exists():
+                return candidate
+        return self.file[-1]
+
+
+def file_list_val_ok(val: list) -> bool:
+    """Return True if every element is a non-empty string."""
+    return all(isinstance(v, str) and v for v in val)
 
 
 @dataclass
@@ -268,13 +354,28 @@ def _read_skill_steering_inject(repo_root: Path, source: str) -> Optional[str]:
     return None
 
 
-def load_catalog(repo_root: Path) -> list[CatalogItem]:
-    """Load and parse the catalog file."""
+def load_catalog(repo_root: Path) -> tuple[list[CatalogItem], dict[str, list[str]]]:
+    """Load and parse the catalog file.
+
+    Returns a tuple of (items, steering_roots) where steering_roots maps
+    tool names to prioritized lists of steering file paths.
+    """
     catalog_path = repo_root / CATALOG_FILE
     if not catalog_path.exists():
         print(f"Error: catalog file not found at {catalog_path}", file=sys.stderr)
         sys.exit(1)
     raw = load_yaml(catalog_path)
+
+    # Parse steering-roots into normalized {tool: [path, ...]} mapping.
+    raw_roots = raw.get("steering-roots", {})
+    steering_roots: dict[str, list[str]] = {}
+    if isinstance(raw_roots, dict):
+        for tool, val in raw_roots.items():
+            if isinstance(val, str):
+                steering_roots[tool] = [val]
+            elif isinstance(val, list):
+                steering_roots[tool] = [str(v) for v in val]
+
     items: list[CatalogItem] = []
     for data in raw.get("items", []):
         try:
@@ -291,24 +392,27 @@ def load_catalog(repo_root: Path) -> list[CatalogItem]:
             item.steering_inject = _read_skill_steering_inject(repo_root, item.source)
 
         # Validate: an item must not combine steering-inject with an
-        # append-mode target that writes to the same steering root file.
-        # Both mechanisms append marked blocks to AGENTS.md and their
-        # marker namespaces could collide.
+        # append-mode target that writes to any of the steering root files.
+        # Both mechanisms append marked blocks and their marker namespaces
+        # could collide.
         if item.steering_inject:
             for tool_name, spec in item.targets.items():
-                if spec and spec.mode == "append" and spec.file == STEERING_ROOT_DEFAULT:
-                    print(
-                        f"Error: catalog entry '{item.name}' has both "
-                        f"steering-inject and an append-mode target to "
-                        f"{STEERING_ROOT_DEFAULT} (tool '{tool_name}'). "
-                        f"These two mechanisms would write overlapping "
-                        f"marked blocks to the same file. Use one or the other.",
-                        file=sys.stderr,
-                    )
-                    sys.exit(1)
+                if spec and spec.mode == "append":
+                    # Collect all possible steering root files for this tool.
+                    roots = steering_roots.get(tool_name, [STEERING_ROOT_DEFAULT])
+                    if any(f in roots for f in spec.file):
+                        print(
+                            f"Error: catalog entry '{item.name}' has both "
+                            f"steering-inject and an append-mode target to "
+                            f"a steering root file (tool '{tool_name}'). "
+                            f"These two mechanisms would write overlapping "
+                            f"marked blocks to the same file. Use one or the other.",
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
 
         items.append(item)
-    return items
+    return items, steering_roots
 
 
 # ---------------------------------------------------------------------------
@@ -432,15 +536,29 @@ def _remove_manifest_entry(
 # Steering injection
 # ---------------------------------------------------------------------------
 
-def _steering_root_file(tool: str) -> str:
-    """Return the root steering file path for a given tool."""
-    return STEERING_ROOT_DEFAULT
+def _resolve_steering_root(
+    dest: Path,
+    tool: str,
+    steering_roots: dict[str, list[str]],
+) -> str:
+    """Return the best steering root file for *tool* at *dest*.
+
+    Uses the prioritized list from ``steering_roots`` if present, falling
+    back to ``STEERING_ROOT_DEFAULT``.  Picks the first candidate that
+    already exists under *dest*, or the last entry if none exist.
+    """
+    candidates = steering_roots.get(tool, [STEERING_ROOT_DEFAULT])
+    for candidate in candidates:
+        if (dest / candidate).exists():
+            return candidate
+    return candidates[-1]
 
 
 def inject_steering(
     dest: Path,
     tool: str,
     item: CatalogItem,
+    steering_roots: dict[str, list[str]],
     *,
     dry_run: bool = False,
 ) -> None:
@@ -448,7 +566,8 @@ def inject_steering(
     if not item.steering_inject:
         return
 
-    root_file = dest / _steering_root_file(tool)
+    root_name = _resolve_steering_root(dest, tool, steering_roots)
+    root_file = dest / root_name
     marker_open = f"<!-- {INJECT_PREFIX}:{item.name} -->"
     marker_close = f"<!-- /{INJECT_PREFIX}:{item.name} -->"
     block = f"\n{marker_open}\n{item.steering_inject}\n{marker_close}\n"
@@ -475,33 +594,47 @@ def remove_steering(
     dest: Path,
     tool: str,
     item: CatalogItem,
+    steering_roots: dict[str, list[str]],
     *,
     dry_run: bool = False,
 ) -> None:
-    """Remove the injected steering block from the tool's root steering file."""
+    """Remove the injected steering block from the tool's root steering file.
+
+    Checks all candidate steering root files for the tool so that
+    previously-injected content is found even if the catalog's
+    steering-roots configuration has changed since install time.
+    """
     if not item.steering_inject:
         return
 
-    root_file = dest / _steering_root_file(tool)
-    if not root_file.exists():
-        return
-
-    content = root_file.read_text()
     marker_open = f"<!-- {INJECT_PREFIX}:{item.name} -->"
-    if marker_open not in content:
+
+    # Build the list of files to check: the prioritized candidates for
+    # this tool, plus the global default as a safety net.
+    candidates = list(steering_roots.get(tool, [STEERING_ROOT_DEFAULT]))
+    if STEERING_ROOT_DEFAULT not in candidates:
+        candidates.append(STEERING_ROOT_DEFAULT)
+
+    for candidate in candidates:
+        root_file = dest / candidate
+        if not root_file.exists():
+            continue
+        content = root_file.read_text()
+        if marker_open not in content:
+            continue
+
+        if dry_run:
+            print(f"[dry-run] Would remove steering block from {root_file}")
+            return
+
+        marker_close = f"<!-- /{INJECT_PREFIX}:{item.name} -->"
+        pattern = rf"\n?{re.escape(marker_open)}\n.*?\n{re.escape(marker_close)}\n?"
+        cleaned = re.sub(pattern, "", content, flags=re.DOTALL)
+        cleaned = _normalize_trailing_blank_lines(cleaned)
+        root_file.write_text(cleaned)
+
+        print(f"  ↳ Removed steering from {root_file}")
         return
-
-    if dry_run:
-        print(f"[dry-run] Would remove steering block from {root_file}")
-        return
-
-    marker_close = f"<!-- /{INJECT_PREFIX}:{item.name} -->"
-    pattern = rf"\n?{re.escape(marker_open)}\n.*?\n{re.escape(marker_close)}\n?"
-    cleaned = re.sub(pattern, "", content, flags=re.DOTALL)
-    cleaned = _normalize_trailing_blank_lines(cleaned)
-    root_file.write_text(cleaned)
-
-    print(f"  ↳ Removed steering from {root_file}")
 
 
 # ---------------------------------------------------------------------------
@@ -542,6 +675,7 @@ def cmd_install(
     repo_root: Path,
     dest: Path,
     tool: str,
+    steering_roots: dict[str, list[str]],
     dry_run: bool = False,
 ) -> None:
     """Install a single catalog item."""
@@ -551,7 +685,8 @@ def cmd_install(
         sys.exit(1)
 
     src = repo_root / item.source
-    dst = dest / target_spec.file
+    resolved_file = target_spec.resolve_file(dest)
+    dst = dest / resolved_file
 
     if not src.exists():
         print(f"Error: source file not found: {src}", file=sys.stderr)
@@ -567,7 +702,7 @@ def cmd_install(
     if not dry_run:
         # Inject steering text into the tool's root steering file if configured.
         # This is idempotent — skips if already present.
-        inject_steering(dest, tool, item, dry_run=False)
+        inject_steering(dest, tool, item, steering_roots, dry_run=False)
 
         # Record in the local install manifest (including the resolved target path).
         # Always record so the manifest stays consistent even if the content was
@@ -577,7 +712,7 @@ def cmd_install(
             target=str(dst), mode=target_spec.mode,
         )
     else:
-        inject_steering(dest, tool, item, dry_run=True)
+        inject_steering(dest, tool, item, steering_roots, dry_run=True)
 
 
 def _install_copy(
@@ -689,6 +824,7 @@ def cmd_uninstall(
     repo_root: Path,
     dest: Path,
     tool: str,
+    steering_roots: dict[str, list[str]],
     dry_run: bool = False,
 ) -> None:
     """Remove a previously installed catalog item."""
@@ -697,7 +833,7 @@ def cmd_uninstall(
         print(f"Error: '{item.name}' has no target for {tool}.", file=sys.stderr)
         sys.exit(1)
 
-    dst = dest / target_spec.file
+    dst = dest / target_spec.resolve_file(dest)
 
     # Determine the install mode. Prefer the mode stored in the manifest
     # (source of truth for how the item was originally installed). Fall
@@ -725,9 +861,9 @@ def cmd_uninstall(
         # else: non-absolute stored path — fall through to catalog default
 
     if mode == "append":
-        _uninstall_append(item, repo_root=repo_root, dst=dst, dest=dest, tool=tool, dry_run=dry_run)
+        _uninstall_append(item, repo_root=repo_root, dst=dst, dest=dest, tool=tool, steering_roots=steering_roots, dry_run=dry_run)
     else:
-        _uninstall_copy(item, repo_root=repo_root, dst=dst, dest=dest, tool=tool, dry_run=dry_run)
+        _uninstall_copy(item, repo_root=repo_root, dst=dst, dest=dest, tool=tool, steering_roots=steering_roots, dry_run=dry_run)
 
 
 def _uninstall_copy(
@@ -737,6 +873,7 @@ def _uninstall_copy(
     dst: Path,
     dest: Path,
     tool: str,
+    steering_roots: dict[str, list[str]],
     dry_run: bool,
 ) -> None:
     """Uninstall a copy-mode item by removing the target file or directory."""
@@ -751,7 +888,7 @@ def _uninstall_copy(
 
     if dry_run:
         print(f"[dry-run] Would remove: {dst}")
-        remove_steering(dest, tool, item, dry_run=True)
+        remove_steering(dest, tool, item, steering_roots, dry_run=True)
         return
 
     if dst.is_symlink() or not dst.is_dir():
@@ -762,7 +899,7 @@ def _uninstall_copy(
     print(f"✓ Uninstalled '{item.name}' (removed {dst})")
 
     # Remove injected steering text from the tool's root steering file.
-    remove_steering(dest, tool, item, dry_run=False)
+    remove_steering(dest, tool, item, steering_roots, dry_run=False)
 
     # Remove from the local install manifest.
     _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
@@ -775,6 +912,7 @@ def _uninstall_append(
     dst: Path,
     dest: Path,
     tool: str,
+    steering_roots: dict[str, list[str]],
     dry_run: bool,
 ) -> None:
     """Uninstall an append-mode item by removing the marked block from the target file."""
@@ -807,7 +945,7 @@ def _uninstall_append(
 
     if dry_run:
         print(f"[dry-run] Would remove '{item.name}' block from {dst}")
-        remove_steering(dest, tool, item, dry_run=True)
+        remove_steering(dest, tool, item, steering_roots, dry_run=True)
         return
 
     marker_close = _append_marker_close(item.name)
@@ -834,7 +972,7 @@ def _uninstall_append(
     print(f"✓ Uninstalled '{item.name}' (removed block from {dst})")
 
     # Remove injected steering text from the tool's root steering file.
-    remove_steering(dest, tool, item, dry_run=False)
+    remove_steering(dest, tool, item, steering_roots, dry_run=False)
 
     # Remove from the local install manifest.
     _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
@@ -920,6 +1058,7 @@ def cmd_sync(
     catalog: list[CatalogItem],
     *,
     repo_root: Path,
+    steering_roots: dict[str, list[str]],
     name: Optional[str] = None,
     dry_run: bool = False,
 ) -> None:
@@ -981,7 +1120,7 @@ def cmd_sync(
                 skipped += 1
                 continue
         else:
-            dst = dest_root / target_spec.file
+            dst = dest_root / target_spec.resolve_file(dest)
 
         src = repo_root / item.source
 
@@ -1014,7 +1153,7 @@ def cmd_sync(
             _sync_copy(item, src=src, dst=dst)
 
         # Re-inject steering (idempotent — skips if already present).
-        inject_steering(dest, tool, item, dry_run=False)
+        inject_steering(dest, tool, item, steering_roots, dry_run=False)
         synced += 1
 
     if dry_run:
@@ -1130,14 +1269,14 @@ def main() -> None:
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parent
-    catalog = load_catalog(repo_root)
+    catalog, steering_roots = load_catalog(repo_root)
 
     if args.command == "list":
         cmd_list(catalog, item_type=args.item_type, tool=args.tool)
         return
 
     if args.command == "sync":
-        cmd_sync(catalog, repo_root=repo_root, name=args.name, dry_run=args.dry_run)
+        cmd_sync(catalog, repo_root=repo_root, steering_roots=steering_roots, name=args.name, dry_run=args.dry_run)
         return
 
     dest = Path(args.dest).resolve()
@@ -1149,9 +1288,9 @@ def main() -> None:
     tool = resolve_tool(args.tool, dest, item)
 
     if args.command == "install":
-        cmd_install(item, repo_root=repo_root, dest=dest, tool=tool, dry_run=args.dry_run)
+        cmd_install(item, repo_root=repo_root, dest=dest, tool=tool, steering_roots=steering_roots, dry_run=args.dry_run)
     elif args.command == "uninstall":
-        cmd_uninstall(item, repo_root=repo_root, dest=dest, tool=tool, dry_run=args.dry_run)
+        cmd_uninstall(item, repo_root=repo_root, dest=dest, tool=tool, steering_roots=steering_roots, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":

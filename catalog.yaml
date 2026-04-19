@@ -4,6 +4,18 @@
 #
 # Target paths use {dest} as a placeholder for the user's project root.
 # A null target means the item is not compatible with that tool.
+#
+# Append-mode targets support a prioritized file list:
+#   claude-code: { file: [CLAUDE.md, AGENTS.md], mode: append }
+# The installer uses the first file that exists in the destination,
+# falling back to the last entry if none exist.
+#
+# steering-roots defines the per-tool file used for steering-inject
+# content from skills. Supports the same prioritized list syntax.
+# Defaults to AGENTS.md for any tool not listed here.
+
+steering-roots:
+  claude-code: [CLAUDE.md, AGENTS.md]
 
 items:
   - name: agent-memory
@@ -65,6 +77,6 @@ items:
     compatibility: [kiro, claude-code, codex, cursor]
     targets:
       kiro: { file: AGENTS.md, mode: append }
-      claude-code: { file: AGENTS.md, mode: append }
+      claude-code: { file: [CLAUDE.md, AGENTS.md], mode: append }
       codex: { file: AGENTS.md, mode: append }
       cursor: { file: AGENTS.md, mode: append }

@@ -64,7 +64,8 @@ The installer reads `catalog.yaml` (the source of truth for all extensions) and 
 
 A few things happen automatically:
 
-- **Steering injection** — Some skills (like `agent-memory`) need a one-liner in your project's `AGENTS.md` to activate at conversation start. The installer appends it on install and removes it on uninstall.
+- **Steering injection** — Some skills (like `agent-memory`) need a one-liner in your project's agent-facing docs to activate at conversation start. The installer appends it on install and removes it on uninstall. For tools like Claude Code that prefer `CLAUDE.md` over `AGENTS.md`, the installer automatically picks the right file — it checks a prioritized list and uses the first one that exists in your project.
+- **Prioritized file targets** — Append-mode targets and steering injection both support a prioritized fallback list. For example, Claude Code's append target is `[CLAUDE.md, AGENTS.md]` — the installer uses `CLAUDE.md` if it exists, otherwise falls back to `AGENTS.md`.
 - **Dry runs** — Add `--dry-run` to any command to preview changes without writing anything.
 - **Manual install** — You can always copy files by hand. See the target paths in `catalog.yaml` or the tool-specific docs below.
 
@@ -75,7 +76,7 @@ A few things happen automatically:
 |-------------|------|-------------|----------------|
 | Skills | `.kiro/skills/<name>` | `.claude/skills/<name>` | `.agents/skills/<name>` |
 | Hooks | `.kiro/hooks/<name>` | — | — |
-| Instructions | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` |
+| Instructions | `AGENTS.md` | `CLAUDE.md` or `AGENTS.md` | `AGENTS.md` |
 
 </details>
 
