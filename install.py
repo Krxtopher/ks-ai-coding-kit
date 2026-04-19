@@ -535,11 +535,12 @@ def cmd_install(
         sys.exit(1)
 
     if target_spec.mode == "append":
-        _install_append(item, src=src, dst=dst, dry_run=dry_run)
+        written = _install_append(item, src=src, dst=dst, dry_run=dry_run)
     else:
         _install_copy(item, src=src, dst=dst, dry_run=dry_run)
+        written = True  # copy mode handles its own skip via interactive prompt
 
-    if not dry_run:
+    if not dry_run and written:
         # Inject steering text into the tool's root steering file if configured.
         inject_steering(dest, tool, item, dry_run=False)
 
@@ -548,7 +549,7 @@ def cmd_install(
             repo_root, name=item.name, dest=dest, tool=tool,
             target=str(dst),
         )
-    else:
+    elif dry_run:
         inject_steering(dest, tool, item, dry_run=True)
 
 
@@ -589,11 +590,11 @@ def _install_copy(
 
 
 def _append_marker_open(name: str) -> str:
-    return f"<!-- {INJECT_PREFIX}:{name} -->"
+    return f"<!-- {INJECT_PREFIX}:append:{name} -->"
 
 
 def _append_marker_close(name: str) -> str:
-    return f"<!-- /{INJECT_PREFIX}:{name} -->"
+    return f"<!-- /{INJECT_PREFIX}:append:{name} -->"
 
 
 def _install_append(
@@ -602,8 +603,12 @@ def _install_append(
     src: Path,
     dst: Path,
     dry_run: bool,
-) -> None:
-    """Install by appending source content to destination file, wrapped in markers."""
+) -> bool:
+    """Install by appending source content to destination file, wrapped in markers.
+
+    Returns ``True`` if the content was (or would be) written, ``False`` if
+    the item was already present and the operation was skipped.
+    """
     marker_open = _append_marker_open(item.name)
     marker_close = _append_marker_close(item.name)
 
@@ -619,19 +624,20 @@ def _install_append(
             print(f"[dry-run] '{item.name}' already appended to {dst}, would skip.")
         else:
             print(f"'{item.name}' already appended to {dst}, skipping.")
-        return
+        return False
 
     block = f"\n{marker_open}\n{content}\n{marker_close}\n"
 
     if dry_run:
         print(f"[dry-run] Would append '{item.name}' to {dst}")
-        return
+        return True
 
     dst.parent.mkdir(parents=True, exist_ok=True)
     with dst.open("a") as f:
         f.write(block)
 
     print(f"✓ Installed '{item.name}' → {dst} (appended)")
+    return True
 
 
 def cmd_uninstall(
@@ -723,6 +729,7 @@ def _uninstall_append(
 
     if dry_run:
         print(f"[dry-run] Would remove '{item.name}' block from {dst}")
+        remove_steering(dest, tool, item, dry_run=True)
         return
 
     marker_close = _append_marker_close(item.name)
@@ -731,6 +738,9 @@ def _uninstall_append(
     dst.write_text(cleaned)
 
     print(f"✓ Uninstalled '{item.name}' (removed block from {dst})")
+
+    # Remove injected steering text from the tool's root steering file.
+    remove_steering(dest, tool, item, dry_run=False)
 
     # Remove from the local install manifest.
     _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
