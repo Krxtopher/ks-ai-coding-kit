@@ -664,9 +664,10 @@ def _notify_requirements(dst: Path, item_name: str) -> None:
     # Skills are always copied as directories; check for requirements.txt at the root.
     req_file = dst / REQUIREMENTS_FILE
     if req_file.is_file():
+        quoted = f'"{req_file}"' if os.name == "nt" else shlex.quote(str(req_file))
         print(f"\n  📦 '{item_name}' has Python dependencies.")
         print(f"     Install them with:\n")
-        print(f"     pip install -r {shlex.quote(str(req_file))}\n")
+        print(f"     pip install -r {quoted}\n")
 
 
 def cmd_list(
