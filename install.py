@@ -811,8 +811,23 @@ def _uninstall_append(
         return
 
     marker_close = _append_marker_close(item.name)
+
+    if marker_close not in content:
+        print(
+            f"Cannot uninstall '{item.name}' from {dst}: found opening marker "
+            f"but closing marker is missing or corrupted."
+        )
+        return
+
     pattern = rf"\n?{re.escape(marker_open)}\n.*?\n{re.escape(marker_close)}\n?"
-    cleaned = re.sub(pattern, "", content, flags=re.DOTALL)
+    cleaned, n = re.subn(pattern, "", content, flags=re.DOTALL)
+    if n == 0:
+        print(
+            f"Cannot uninstall '{item.name}' from {dst}: marked block could "
+            f"not be removed; file may be corrupted."
+        )
+        return
+
     cleaned = _normalize_trailing_blank_lines(cleaned)
     dst.write_text(cleaned)
 
@@ -866,10 +881,26 @@ def _sync_append(item: CatalogItem, *, src: Path, dst: Path) -> None:
             )
             return
         existing = dst.read_text()
-        # Remove old block if present.
-        if marker_open in existing:
+        # Remove old block if present, but only when both markers exist.
+        has_open = marker_open in existing
+        has_close = marker_close in existing
+        if has_open != has_close:
+            print(
+                f"Skipping '{item.name}': append target contains incomplete "
+                f"managed block markers in {dst}; please repair or remove the "
+                f"existing block before syncing again.",
+            )
+            return
+        if has_open and has_close:
             pattern = rf"\n?{re.escape(marker_open)}\n.*?\n{re.escape(marker_close)}\n?"
-            existing = re.sub(pattern, "", existing, flags=re.DOTALL)
+            existing, removed = re.subn(pattern, "", existing, flags=re.DOTALL)
+            if removed == 0:
+                print(
+                    f"Skipping '{item.name}': append target contains managed "
+                    f"block markers in an unexpected format in {dst}; please "
+                    f"repair or remove the existing block before syncing again.",
+                )
+                return
             existing = _normalize_trailing_blank_lines(existing)
             dst.write_text(existing)
     else:
