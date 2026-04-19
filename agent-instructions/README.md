@@ -43,4 +43,6 @@ Or copy files manually to the appropriate location for your tool (see the table 
 
 ## Contents
 
-No agent instructions are currently available. All capabilities have been migrated to [skills](../skills/).
+| File | Description |
+|------|-------------|
+| `documentation-standards.md` | Guidelines for when and how to update README.md and agent-facing docs (AGENTS.md, CLAUDE.md) |

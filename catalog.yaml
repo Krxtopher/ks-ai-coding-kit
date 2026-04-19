@@ -14,8 +14,8 @@ items:
     targets:
       kiro: .kiro/skills/agent-memory
       claude-code: .claude/skills/agent-memory
-      codex: skills/agent-memory
-      cursor: skills/agent-memory
+      codex: .agents/skills/agent-memory
+      cursor: .agents/skills/agent-memory
 
   - name: doc-convert
     type: skill
@@ -25,8 +25,8 @@ items:
     targets:
       kiro: .kiro/skills/doc-convert
       claude-code: .claude/skills/doc-convert
-      codex: skills/doc-convert
-      cursor: skills/doc-convert
+      codex: .agents/skills/doc-convert
+      cursor: .agents/skills/doc-convert
 
   - name: current-time
     type: skill
@@ -36,8 +36,8 @@ items:
     targets:
       kiro: .kiro/skills/current-time
       claude-code: .claude/skills/current-time
-      codex: skills/current-time
-      cursor: skills/current-time
+      codex: .agents/skills/current-time
+      cursor: .agents/skills/current-time
 
   - name: bedrock-vision
     type: skill
@@ -47,8 +47,8 @@ items:
     targets:
       kiro: .kiro/skills/bedrock-vision
       claude-code: .claude/skills/bedrock-vision
-      codex: skills/bedrock-vision
-      cursor: skills/bedrock-vision
+      codex: .agents/skills/bedrock-vision
+      cursor: .agents/skills/bedrock-vision
 
   - name: shell-command-explainer
     type: hook
@@ -57,3 +57,14 @@ items:
     compatibility: [kiro]
     targets:
       kiro: .kiro/hooks/shell-command-explainer.kiro.hook
+
+  - name: documentation-standards
+    type: instruction
+    source: agent-instructions/documentation-standards.md
+    description: Guidelines for when and how to update README.md and agent-facing docs (AGENTS.md, CLAUDE.md)
+    compatibility: [kiro, claude-code, codex, cursor]
+    targets:
+      kiro: .kiro/steering/documentation-standards.md
+      claude-code: { file: CLAUDE.md, mode: append }
+      codex: { file: AGENTS.md, mode: append }
+      cursor: .cursor/rules/documentation-standards.md

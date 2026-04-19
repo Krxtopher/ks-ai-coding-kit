@@ -98,7 +98,18 @@ def _parse_yaml_minimal(text: str) -> dict:
             if val in ("null", "~", ""):
                 current["targets"][key.strip()] = None
             else:
-                current["targets"][key.strip()] = val
+                # Check for inline mapping: { file: ..., mode: ... }
+                if val.startswith("{") and val.endswith("}"):
+                    inner = val[1:-1].strip()
+                    mapping: dict[str, str] = {}
+                    for pair in inner.split(","):
+                        pair = pair.strip()
+                        if ":" in pair:
+                            mk, _, mv = pair.partition(":")
+                            mapping[mk.strip()] = mv.strip().strip("'\"")
+                    current["targets"][key.strip()] = mapping
+                else:
+                    current["targets"][key.strip()] = val
             continue
 
         if in_targets and indent < 6:
@@ -136,24 +147,60 @@ def load_yaml(path: Path) -> dict:
 # ---------------------------------------------------------------------------
 
 @dataclass
+class TargetSpec:
+    """Resolved install target for a single tool.
+
+    A target can be specified in the catalog as either:
+      - A plain string (shorthand for ``{file: <path>, mode: copy}``)
+      - A mapping with ``file`` and ``mode`` keys
+    """
+    file: str
+    mode: str = "copy"  # "copy" or "append"
+
+    @classmethod
+    def from_value(cls, value: object) -> Optional["TargetSpec"]:
+        """Create a TargetSpec from a catalog target value.
+
+        Returns ``None`` if the value is ``None`` (tool not supported).
+        """
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return cls(file=value, mode="copy")
+        if isinstance(value, dict):
+            file_val = value.get("file")
+            if file_val is None:
+                raise ValueError("Target mapping must include a 'file' key.")
+            mode = value.get("mode", "copy")
+            if mode not in ("copy", "append"):
+                raise ValueError(f"Invalid target mode '{mode}'. Must be 'copy' or 'append'.")
+            return cls(file=str(file_val), mode=mode)
+        raise ValueError(f"Unexpected target value type: {type(value)}")
+
+
+@dataclass
 class CatalogItem:
     name: str
     type: str
     source: str
     description: str
     compatibility: list[str] = field(default_factory=list)
-    targets: dict[str, Optional[str]] = field(default_factory=dict)
+    targets: dict[str, Optional[TargetSpec]] = field(default_factory=dict)
     steering_inject: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: dict) -> CatalogItem:
+        raw_targets = data.get("targets", {})
+        parsed_targets: dict[str, Optional[TargetSpec]] = {}
+        for tool, value in raw_targets.items():
+            parsed_targets[tool] = TargetSpec.from_value(value)
         return cls(
             name=data["name"],
             type=data["type"],
             source=data["source"],
             description=data.get("description", ""),
             compatibility=data.get("compatibility", []),
-            targets=data.get("targets", {}),
+            targets=parsed_targets,
         )
 
 
@@ -475,25 +522,50 @@ def cmd_install(
     dry_run: bool = False,
 ) -> None:
     """Install a single catalog item."""
-    target_rel = item.targets.get(tool)
-    if target_rel is None:
+    target_spec = item.targets.get(tool)
+    if target_spec is None:
         print(f"Error: '{item.name}' is not compatible with {tool}.", file=sys.stderr)
         sys.exit(1)
 
     src = repo_root / item.source
-    dst = dest / target_rel
+    dst = dest / target_spec.file
 
     if not src.exists():
         print(f"Error: source file not found: {src}", file=sys.stderr)
         sys.exit(1)
 
+    if target_spec.mode == "append":
+        _install_append(item, src=src, dst=dst, dry_run=dry_run)
+    else:
+        _install_copy(item, src=src, dst=dst, dry_run=dry_run)
+
+    if not dry_run:
+        # Inject steering text into the tool's root steering file if configured.
+        inject_steering(dest, tool, item, dry_run=False)
+
+        # Record in the local install manifest (including the resolved target path).
+        _add_manifest_entry(
+            repo_root, name=item.name, dest=dest, tool=tool,
+            target=str(dst),
+        )
+    else:
+        inject_steering(dest, tool, item, dry_run=True)
+
+
+def _install_copy(
+    item: CatalogItem,
+    *,
+    src: Path,
+    dst: Path,
+    dry_run: bool,
+) -> None:
+    """Install by copying source to destination."""
     if dry_run:
         print(f"[dry-run] Would copy:")
         print(f"  {src}")
         print(f"  → {dst}")
         if dst.exists() or dst.is_symlink():
             print(f"  ⚠ Destination already exists and would be overwritten.")
-        inject_steering(dest, tool, item, dry_run=True)
         return
 
     if dst.exists() or dst.is_symlink():
@@ -515,14 +587,51 @@ def cmd_install(
 
     print(f"✓ Installed '{item.name}' → {dst}")
 
-    # Inject steering text into the tool's root steering file if configured.
-    inject_steering(dest, tool, item, dry_run=False)
 
-    # Record in the local install manifest (including the resolved target path).
-    _add_manifest_entry(
-        repo_root, name=item.name, dest=dest, tool=tool,
-        target=str(dst),
-    )
+def _append_marker_open(name: str) -> str:
+    return f"<!-- {INJECT_PREFIX}:{name} -->"
+
+
+def _append_marker_close(name: str) -> str:
+    return f"<!-- /{INJECT_PREFIX}:{name} -->"
+
+
+def _install_append(
+    item: CatalogItem,
+    *,
+    src: Path,
+    dst: Path,
+    dry_run: bool,
+) -> None:
+    """Install by appending source content to destination file, wrapped in markers."""
+    marker_open = _append_marker_open(item.name)
+    marker_close = _append_marker_close(item.name)
+
+    # Read source content.
+    if src.is_dir():
+        print(f"Error: cannot append a directory source to a file target.", file=sys.stderr)
+        sys.exit(1)
+    content = src.read_text()
+
+    # Don't double-append.
+    if dst.exists() and marker_open in dst.read_text():
+        if dry_run:
+            print(f"[dry-run] '{item.name}' already appended to {dst}, would skip.")
+        else:
+            print(f"'{item.name}' already appended to {dst}, skipping.")
+        return
+
+    block = f"\n{marker_open}\n{content}\n{marker_close}\n"
+
+    if dry_run:
+        print(f"[dry-run] Would append '{item.name}' to {dst}")
+        return
+
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    with dst.open("a") as f:
+        f.write(block)
+
+    print(f"✓ Installed '{item.name}' → {dst} (appended)")
 
 
 def cmd_uninstall(
@@ -534,19 +643,34 @@ def cmd_uninstall(
     dry_run: bool = False,
 ) -> None:
     """Remove a previously installed catalog item."""
-    target_rel = item.targets.get(tool)
-    if target_rel is None:
+    target_spec = item.targets.get(tool)
+    if target_spec is None:
         print(f"Error: '{item.name}' has no target for {tool}.", file=sys.stderr)
         sys.exit(1)
 
-    dst = dest / target_rel
+    dst = dest / target_spec.file
 
+    if target_spec.mode == "append":
+        _uninstall_append(item, repo_root=repo_root, dst=dst, dest=dest, tool=tool, dry_run=dry_run)
+    else:
+        _uninstall_copy(item, repo_root=repo_root, dst=dst, dest=dest, tool=tool, dry_run=dry_run)
+
+
+def _uninstall_copy(
+    item: CatalogItem,
+    *,
+    repo_root: Path,
+    dst: Path,
+    dest: Path,
+    tool: str,
+    dry_run: bool,
+) -> None:
+    """Uninstall a copy-mode item by removing the target file or directory."""
     # Treat broken symlinks as installed (exists() returns False for them).
     installed = dst.exists() or dst.is_symlink()
 
     if not installed:
         print(f"'{item.name}' is not installed at {dst}.")
-        # Still remove any stale manifest entry so sync won't recreate it.
         if not dry_run:
             _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
         return
@@ -568,6 +692,91 @@ def cmd_uninstall(
 
     # Remove from the local install manifest.
     _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
+
+
+def _uninstall_append(
+    item: CatalogItem,
+    *,
+    repo_root: Path,
+    dst: Path,
+    dest: Path,
+    tool: str,
+    dry_run: bool,
+) -> None:
+    """Uninstall an append-mode item by removing the marked block from the target file."""
+    import re as _re
+
+    marker_open = _append_marker_open(item.name)
+
+    if not dst.exists():
+        print(f"'{item.name}' is not installed (file not found: {dst}).")
+        if not dry_run:
+            _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
+        return
+
+    content = dst.read_text()
+    if marker_open not in content:
+        print(f"'{item.name}' is not installed in {dst}.")
+        if not dry_run:
+            _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
+        return
+
+    if dry_run:
+        print(f"[dry-run] Would remove '{item.name}' block from {dst}")
+        return
+
+    marker_close = _append_marker_close(item.name)
+    pattern = rf"\n?{_re.escape(marker_open)}\n.*?\n{_re.escape(marker_close)}\n?"
+    cleaned = _re.sub(pattern, "", content, flags=_re.DOTALL)
+    dst.write_text(cleaned)
+
+    print(f"✓ Uninstalled '{item.name}' (removed block from {dst})")
+
+    # Remove from the local install manifest.
+    _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
+
+
+def _sync_copy(item: CatalogItem, *, src: Path, dst: Path) -> None:
+    """Sync a copy-mode item by replacing the target."""
+    if dst.exists() or dst.is_symlink():
+        if dst.is_dir() and not dst.is_symlink():
+            shutil.rmtree(dst)
+        else:
+            dst.unlink()
+
+    dst.parent.mkdir(parents=True, exist_ok=True)
+
+    if src.is_dir():
+        shutil.copytree(src, dst)
+    else:
+        shutil.copy2(src, dst)
+
+    print(f"✓ Synced '{item.name}' → {dst}")
+
+
+def _sync_append(item: CatalogItem, *, src: Path, dst: Path) -> None:
+    """Sync an append-mode item by removing the old block and re-appending."""
+    import re as _re
+
+    marker_open = _append_marker_open(item.name)
+    marker_close = _append_marker_close(item.name)
+    content = src.read_text()
+    block = f"\n{marker_open}\n{content}\n{marker_close}\n"
+
+    if dst.exists():
+        existing = dst.read_text()
+        # Remove old block if present.
+        if marker_open in existing:
+            pattern = rf"\n?{_re.escape(marker_open)}\n.*?\n{_re.escape(marker_close)}\n?"
+            existing = _re.sub(pattern, "", existing, flags=_re.DOTALL)
+            dst.write_text(existing)
+    else:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+
+    with dst.open("a") as f:
+        f.write(block)
+
+    print(f"✓ Synced '{item.name}' → {dst} (appended)")
 
 
 def cmd_sync(
@@ -611,6 +820,13 @@ def cmd_sync(
 
         dest_root = dest.resolve(strict=False)
 
+        # Resolve the target spec from the current catalog.
+        target_spec = item.targets.get(tool)
+        if target_spec is None:
+            print(f"⚠ '{item.name}' no longer has a target for {tool}, skipping.")
+            skipped += 1
+            continue
+
         # Prefer the resolved target path stored at install time. Fall back
         # to the current catalog target for manifests written before this
         # field was added.
@@ -628,12 +844,7 @@ def cmd_sync(
                 skipped += 1
                 continue
         else:
-            target_rel = item.targets.get(tool)
-            if target_rel is None:
-                print(f"⚠ '{item.name}' no longer has a target for {tool}, skipping.")
-                skipped += 1
-                continue
-            dst = dest_root / target_rel
+            dst = dest_root / target_spec.file
 
         src = repo_root / item.source
 
@@ -648,25 +859,17 @@ def cmd_sync(
             continue
 
         if dry_run:
-            print(f"[dry-run] Would copy '{item.name}' → {dst}")
+            if target_spec.mode == "append":
+                print(f"[dry-run] Would re-append '{item.name}' in {dst}")
+            else:
+                print(f"[dry-run] Would copy '{item.name}' → {dst}")
             would_sync += 1
             continue
 
-        # Remove existing target.
-        if dst.exists() or dst.is_symlink():
-            if dst.is_dir() and not dst.is_symlink():
-                shutil.rmtree(dst)
-            else:
-                dst.unlink()
-
-        dst.parent.mkdir(parents=True, exist_ok=True)
-
-        if src.is_dir():
-            shutil.copytree(src, dst)
+        if target_spec.mode == "append":
+            _sync_append(item, src=src, dst=dst)
         else:
-            shutil.copy2(src, dst)
-
-        print(f"✓ Synced '{item.name}' → {dst}")
+            _sync_copy(item, src=src, dst=dst)
 
         # Re-inject steering (idempotent — skips if already present).
         inject_steering(dest, tool, item, dry_run=False)
