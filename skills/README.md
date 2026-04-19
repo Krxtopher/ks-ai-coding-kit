@@ -30,7 +30,7 @@ The rest of `SKILL.md` contains the detailed instructions the agent follows when
 | `agent-memory/` | Persistent AI memory system with project-scoped and user-scoped memory files for retaining context across conversations |
 | `current-time/` | Looks up the current date and time, accurate to the second, in both local time and UTC |
 | `doc-convert/` | Convert documents between formats using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
-| `image-describe/` | Analyze images from the workspace by extracting technical metadata and generating AI-powered descriptions via Amazon Bedrock |
+| `bedrock-vision/` | Analyze images from the workspace by extracting technical metadata and generating AI-powered descriptions via Amazon Bedrock |
 
 ## Usage Examples
 
@@ -56,7 +56,7 @@ The agent checks the current time, compares it to the deployment's start timesta
 
 The agent runs pandoc with the bundled reference template and Lua filter, then fixes list indentation — producing a styled `.docx` ready to share.
 
-### image-describe
+### bedrock-vision
 
 > Describe this image and extract all of its text. `test-assets/artemis-sls-infographic.jpg`
 

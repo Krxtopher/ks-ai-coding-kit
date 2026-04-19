@@ -1,5 +1,5 @@
 ---
-name: image-describe
+name: bedrock-vision
 description: >
   Analyze images from the workspace by extracting technical metadata and generating
   AI-powered descriptions via Amazon Bedrock. Use when the user references an image file
@@ -11,7 +11,7 @@ metadata:
   version: "1.0"
 ---
 
-# Image Describe
+# Bedrock Vision
 
 This skill lets you analyze image files from the user's workspace. It extracts technical metadata (dimensions, file size, MIME type, bit depth, channels) and generates an AI-powered description using a Bedrock vision model.
 
@@ -47,7 +47,7 @@ If the user chooses **Other**, ask them for the exact Bedrock model ID to use.
 Once you have the model choice, run the script:
 
 ```bash
-python skills/image-describe/scripts/describe.py <image_path> --model <chosen_model_id>
+python skills/bedrock-vision/scripts/describe.py <image_path> --model <chosen_model_id>
 ```
 
 ### Customizing the Prompt
@@ -55,24 +55,24 @@ python skills/image-describe/scripts/describe.py <image_path> --model <chosen_mo
 By default, the script uses a general-purpose description prompt. **You should override this** with a prompt tailored to what the user is actually asking about:
 
 ```bash
-python skills/image-describe/scripts/describe.py photo.png --model us.amazon.nova-2-lite-v1:0 --prompt "What text is visible in this image? Transcribe it exactly."
+python skills/bedrock-vision/scripts/describe.py photo.png --model us.amazon.nova-2-lite-v1:0 --prompt "What text is visible in this image? Transcribe it exactly."
 ```
 
 ```bash
-python skills/image-describe/scripts/describe.py diagram.png --model us.anthropic.claude-sonnet-4-6 --prompt "Describe the architecture shown in this diagram, including all components and their connections."
+python skills/bedrock-vision/scripts/describe.py diagram.png --model us.anthropic.claude-sonnet-4-6 --prompt "Describe the architecture shown in this diagram, including all components and their connections."
 ```
 
 ### Other Options
 
 ```bash
 # Use a specific AWS profile
-python skills/image-describe/scripts/describe.py photo.png --model us.amazon.nova-2-lite-v1:0 --profile admin-933
+python skills/bedrock-vision/scripts/describe.py photo.png --model us.amazon.nova-2-lite-v1:0 --profile admin-933
 
 # Use a different region
-python skills/image-describe/scripts/describe.py photo.png --model us.amazon.nova-2-lite-v1:0 --region us-west-2
+python skills/bedrock-vision/scripts/describe.py photo.png --model us.amazon.nova-2-lite-v1:0 --region us-west-2
 
 # Get output as JSON (useful for programmatic consumption)
-python skills/image-describe/scripts/describe.py photo.png --model us.amazon.nova-2-lite-v1:0 --json
+python skills/bedrock-vision/scripts/describe.py photo.png --model us.amazon.nova-2-lite-v1:0 --json
 ```
 
 ### Example Output

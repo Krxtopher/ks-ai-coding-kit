@@ -42,17 +42,17 @@ items:
       codex: skills/current-time
       cursor: skills/current-time
 
-  - name: image-describe
+  - name: bedrock-vision
     type: skill
-    source: skills/image-describe
+    source: skills/bedrock-vision
     description: Analyze images from the workspace using Bedrock vision models and extract technical metadata
     tags: [image, vision, describe, screenshot, diagram, photo, bedrock, nova]
     compatibility: [kiro, claude-code, codex, cursor]
     targets:
-      kiro: .kiro/skills/image-describe
-      claude-code: .claude/skills/image-describe
-      codex: skills/image-describe
-      cursor: skills/image-describe
+      kiro: .kiro/skills/bedrock-vision
+      claude-code: .claude/skills/bedrock-vision
+      codex: skills/bedrock-vision
+      cursor: skills/bedrock-vision
 
   - name: shell-command-explainer
     type: hook
