@@ -1,5 +1,5 @@
 ---
-name: ai-memory
+name: agent-memory
 description: >
   Persistent AI memory system with project-scoped and user-scoped memory files.
   Activate at the start of every conversation to load prior context.
@@ -9,7 +9,7 @@ metadata:
   author: ks-ai-coding-kit
   version: "1.1"
   steering-inject: >
-    ALWAYS activate the "ai-memory" skill. Start each conversation by silently retrieving your memories.
+    ALWAYS activate the "agent-memory" skill. Start each conversation by silently retrieving your memories.
 ---
 
 # AI Memory System

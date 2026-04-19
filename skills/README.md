@@ -27,14 +27,14 @@ The rest of `SKILL.md` contains the detailed instructions the agent follows when
 
 | Directory | Description |
 |-----------|-------------|
-| `ai-memory/` | Persistent AI memory system with project-scoped and user-scoped memory files for retaining context across conversations |
+| `agent-memory/` | Persistent AI memory system with project-scoped and user-scoped memory files for retaining context across conversations |
 | `current-time/` | Looks up the current date and time, accurate to the second, in both local time and UTC |
 | `doc-convert/` | Convert documents between formats using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
 | `image-describe/` | Analyze images from the workspace by extracting technical metadata and generating AI-powered descriptions via Amazon Bedrock |
 
 ## Usage Examples
 
-### ai-memory
+### agent-memory
 
 > Remember that we decided to use DynamoDB for session storage instead of Redis.
 

@@ -6,17 +6,17 @@
 # A null target means the item is not compatible with that tool.
 
 items:
-  - name: ai-memory
+  - name: agent-memory
     type: skill
-    source: skills/ai-memory
+    source: skills/agent-memory
     description: Persistent AI memory system with project-scoped and user-scoped memory files
     tags: [memory, context, persistence]
     compatibility: [kiro, claude-code, codex, cursor]
     targets:
-      kiro: .kiro/skills/ai-memory
-      claude-code: .claude/skills/ai-memory
-      codex: skills/ai-memory
-      cursor: skills/ai-memory
+      kiro: .kiro/skills/agent-memory
+      claude-code: .claude/skills/agent-memory
+      codex: skills/agent-memory
+      cursor: skills/agent-memory
 
   - name: doc-convert
     type: skill

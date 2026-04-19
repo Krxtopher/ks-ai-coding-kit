@@ -9,11 +9,11 @@ Usage:
     python install.py list --tag safety
     python install.py list --type hook
     python install.py list --tool kiro
-    python install.py install ai-memory --dest /path/to/project --tool kiro
-    python install.py install ai-memory --dest /path/to/project --dry-run --tool kiro
-    python install.py uninstall ai-memory --dest /path/to/project --tool kiro
+    python install.py install agent-memory --dest /path/to/project --tool kiro
+    python install.py install agent-memory --dest /path/to/project --dry-run --tool kiro
+    python install.py uninstall agent-memory --dest /path/to/project --tool kiro
     python install.py sync
-    python install.py sync ai-memory
+    python install.py sync agent-memory
     python install.py sync --dry-run
 """
 

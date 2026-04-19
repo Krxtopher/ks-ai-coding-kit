@@ -32,7 +32,7 @@ ks-ai-coding-kit/
 
 | Directory | Compatibility | Description |
 |-----------|---------------|-------------|
-| `skills/ai-memory` | Kiro, Claude Code, Codex, Cursor | Persistent AI memory system — project-scoped and user-scoped memory files under `.agent-memory/` |
+| `skills/agent-memory` | Kiro, Claude Code, Codex, Cursor | Persistent AI memory system — project-scoped and user-scoped memory files under `.agent-memory/` |
 | `skills/current-time` | Kiro, Claude Code, Codex, Cursor | Looks up the current date and time in both local time and UTC, accurate to the second |
 | `skills/doc-convert` | Kiro, Claude Code, Codex, Cursor | Document conversion using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
 | `skills/image-describe` | Kiro, Claude Code, Codex, Cursor | Analyze images from the workspace using Bedrock vision models and extract technical metadata (dimensions, file size, MIME type, bit depth, channels) |
@@ -104,6 +104,6 @@ Always pass `--tool` explicitly to avoid interactive prompts that block non-inte
 - When helping maintain this repo, always include Compatibility notes on new items.
 - When adding a new installable item, add a corresponding entry to `catalog.yaml`.
 
-<!-- ks-ai-coding-kit:ai-memory -->
-ALWAYS activate the "ai-memory" skill. Start each conversation by silently retrieving your memories.
-<!-- /ks-ai-coding-kit:ai-memory -->
+<!-- ks-ai-coding-kit:agent-memory -->
+ALWAYS activate the "agent-memory" skill. Start each conversation by silently retrieving your memories.
+<!-- /ks-ai-coding-kit:agent-memory -->
