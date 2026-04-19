@@ -211,6 +211,11 @@ class TargetSpec:
     file: list[str]  # prioritized list; single-path targets are stored as [path]
     mode: str = "copy"  # "copy" or "append"
 
+    @staticmethod
+    def _file_list_ok(val: list) -> bool:
+        """Return True if every element is a non-empty string."""
+        return all(isinstance(v, str) and v for v in val)
+
     @classmethod
     def from_value(cls, value: object) -> Optional["TargetSpec"]:
         """Create a TargetSpec from a catalog target value.
@@ -232,7 +237,7 @@ class TargetSpec:
             if isinstance(file_val, str):
                 file_list = [file_val]
             elif isinstance(file_val, list):
-                if not file_list_val_ok(file_val):
+                if not cls._file_list_ok(file_val):
                     raise ValueError("Target 'file' list must contain only non-empty strings.")
                 file_list = list(file_val)
             else:
@@ -254,11 +259,6 @@ class TargetSpec:
         return self.file[-1]
 
 
-def file_list_val_ok(val: list) -> bool:
-    """Return True if every element is a non-empty string."""
-    return all(isinstance(v, str) and v for v in val)
-
-
 @dataclass
 class CatalogItem:
     name: str
@@ -275,8 +275,13 @@ class CatalogItem:
         parsed_targets: dict[str, Optional[TargetSpec]] = {}
         for tool, value in raw_targets.items():
             parsed_targets[tool] = TargetSpec.from_value(value)
+        name = data["name"]
+        # Validate that the name is safe for use in HTML comment markers
+        # if any target uses append mode (or if the item might have
+        # steering-inject, which also uses comment markers).
+        _validate_marker_name(name)
         return cls(
-            name=data["name"],
+            name=name,
             type=data["type"],
             source=data["source"],
             description=data.get("description", ""),
@@ -600,9 +605,10 @@ def remove_steering(
 ) -> None:
     """Remove the injected steering block from the tool's root steering file.
 
-    Checks all candidate steering root files for the tool so that
-    previously-injected content is found even if the catalog's
-    steering-roots configuration has changed since install time.
+    Checks all candidate steering root files for the tool and removes the
+    block from the first file that contains it.  Only one file is expected
+    to hold the block at any given time, so the search stops after the
+    first successful removal.
     """
     if not item.steering_inject:
         return
@@ -628,8 +634,7 @@ def remove_steering(
             return
 
         marker_close = f"<!-- /{INJECT_PREFIX}:{item.name} -->"
-        pattern = rf"\n?{re.escape(marker_open)}\n.*?\n{re.escape(marker_close)}\n?"
-        cleaned = re.sub(pattern, "", content, flags=re.DOTALL)
+        cleaned, _ = _remove_marked_block(content, marker_open, marker_close)
         cleaned = _normalize_trailing_blank_lines(cleaned)
         root_file.write_text(cleaned)
 
@@ -764,9 +769,33 @@ def _append_marker_close(name: str) -> str:
     return f"<!-- /{INJECT_PREFIX}:append:{name} -->"
 
 
+def _validate_marker_name(name: str) -> None:
+    """Raise ValueError if *name* would break an HTML comment marker."""
+    if "--" in name or ">" in name:
+        raise ValueError(
+            f"Item name {name!r} contains '--' or '>' which would corrupt "
+            f"HTML comment markers. Rename the catalog entry."
+        )
+
+
 def _normalize_trailing_blank_lines(text: str) -> str:
     """Collapse trailing runs of 3+ consecutive newlines down to 2."""
     return re.sub(r"\n{3,}\Z", "\n\n", text)
+
+
+def _remove_marked_block(content: str, marker_open: str, marker_close: str) -> tuple[str, int]:
+    """Remove a marker-delimited block from *content*.
+
+    Uses a pattern that refuses to match across block boundaries — the
+    content between markers must not contain another opening HTML comment
+    of the same prefix.  Returns ``(cleaned_text, substitution_count)``.
+    """
+    pattern = (
+        rf"\n?{re.escape(marker_open)}\n"
+        rf"(?:(?!<!-- {re.escape(INJECT_PREFIX)}).)*?\n"
+        rf"{re.escape(marker_close)}\n?"
+    )
+    return re.subn(pattern, "", content, count=1, flags=re.DOTALL)
 
 
 def _install_append(
@@ -791,8 +820,13 @@ def _install_append(
         print(f"Error: cannot append to directory target {dst}.", file=sys.stderr)
         sys.exit(1)
 
+    # Read existing content once to avoid TOCTOU issues.
+    existing_content: str | None = None
+    if dst.exists():
+        existing_content = dst.read_text()
+
     # Don't double-append.
-    if dst.exists() and marker_open in dst.read_text():
+    if existing_content is not None and marker_open in existing_content:
         if dry_run:
             print(f"[dry-run] '{item.name}' already appended to {dst}, would skip.")
         else:
@@ -810,10 +844,13 @@ def _install_append(
     # Prepend a blank-line separator when appending to a file that already
     # has content, so the marker block doesn't run into existing text.
     # Skip the separator for new or empty files to avoid a leading blank line.
-    separator = "\n" if dst.exists() and dst.stat().st_size > 0 else ""
+    separator = "\n" if existing_content else ""
 
-    with dst.open("a") as f:
-        f.write(f"{separator}{block}")
+    with dst.open("w" if existing_content is not None else "x") as f:
+        if existing_content is not None:
+            f.write(f"{existing_content}{separator}{block}")
+        else:
+            f.write(block)
 
     print(f"✓ Installed '{item.name}' → {dst} (appended)")
 
@@ -952,18 +989,21 @@ def _uninstall_append(
 
     if marker_close not in content:
         print(
-            f"Cannot uninstall '{item.name}' from {dst}: found opening marker "
-            f"but closing marker is missing or corrupted."
+            f"Warning: '{item.name}' in {dst}: found opening marker "
+            f"but closing marker is missing or corrupted. "
+            f"Removing manifest entry to avoid a stuck state.",
         )
+        _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
         return
 
-    pattern = rf"\n?{re.escape(marker_open)}\n.*?\n{re.escape(marker_close)}\n?"
-    cleaned, n = re.subn(pattern, "", content, flags=re.DOTALL)
+    cleaned, n = _remove_marked_block(content, marker_open, marker_close)
     if n == 0:
         print(
-            f"Cannot uninstall '{item.name}' from {dst}: marked block could "
-            f"not be removed; file may be corrupted."
+            f"Warning: '{item.name}' in {dst}: marked block could "
+            f"not be removed; file may be corrupted. "
+            f"Removing manifest entry to avoid a stuck state.",
         )
+        _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
         return
 
     cleaned = _normalize_trailing_blank_lines(cleaned)
@@ -1030,8 +1070,7 @@ def _sync_append(item: CatalogItem, *, src: Path, dst: Path) -> None:
             )
             return
         if has_open and has_close:
-            pattern = rf"\n?{re.escape(marker_open)}\n.*?\n{re.escape(marker_close)}\n?"
-            existing, removed = re.subn(pattern, "", existing, flags=re.DOTALL)
+            existing, removed = _remove_marked_block(existing, marker_open, marker_close)
             if removed == 0:
                 print(
                     f"Skipping '{item.name}': append target contains managed "
