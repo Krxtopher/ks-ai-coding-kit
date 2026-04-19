@@ -54,8 +54,6 @@ def _parse_yaml_minimal(text: str) -> dict:
     Handles only the subset used by catalog.yaml: top-level key with a list
     of mappings containing scalar and list values. Not a general-purpose parser.
     """
-    import re
-
     items: list[dict] = []
     current: dict | None = None
     in_targets = False
@@ -333,6 +331,9 @@ def _is_valid_manifest_entry(entry: object) -> bool:
         return False
     if "target" in entry and not isinstance(entry["target"], str):
         return False
+    if "mode" in entry:
+        if not isinstance(entry["mode"], str) or entry["mode"] not in ("copy", "append"):
+            return False
     return True
 
 
@@ -629,8 +630,8 @@ def _append_marker_close(name: str) -> str:
 
 
 def _normalize_trailing_blank_lines(text: str) -> str:
-    """Collapse runs of 3+ consecutive newlines down to 2 (one blank line)."""
-    return re.sub(r"\n{3,}", "\n\n", text)
+    """Collapse trailing runs of 3+ consecutive newlines down to 2."""
+    return re.sub(r"\n{3,}\Z", "\n\n", text)
 
 
 def _install_append(
