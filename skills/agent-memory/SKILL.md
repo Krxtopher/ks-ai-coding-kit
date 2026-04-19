@@ -21,6 +21,8 @@ You have a persistent memory system with two files under `.agent-memory/`:
 | `.agent-memory/project.md` | Project | Committed to Git. Knowledge that benefits the whole team: architectural decisions, project-specific gotchas, task history, and technical insights about this codebase. |
 | `.agent-memory/user.md` | User | Gitignored. Personal preferences, workflow habits, tool choices, conversation topics, and anything specific to an individual developer. |
 
+> **Note:** Add `.agent-memory/user.md` (not the entire `.agent-memory/` directory) to your project's `.gitignore` so that `project.md` remains tracked by Git.
+
 ## Deciding Which Scope
 
 Use a simple heuristic: **if the memory would be useful to another developer on this project, it's project-scoped. Otherwise, it's user-scoped.**
