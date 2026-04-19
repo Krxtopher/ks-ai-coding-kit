@@ -23,6 +23,7 @@ import contextlib
 import json
 import os
 import re
+import shlex
 import shutil
 import sys
 import tempfile
@@ -660,12 +661,12 @@ def remove_steering(
 
 def _notify_requirements(dst: Path, item_name: str) -> None:
     """Print a notice if the installed skill contains a requirements.txt."""
-    # For copy-mode skills, dst is the installed skill directory.
-    req_file = dst / REQUIREMENTS_FILE if dst.is_dir() else dst.parent / REQUIREMENTS_FILE
+    # Skills are always copied as directories; check for requirements.txt at the root.
+    req_file = dst / REQUIREMENTS_FILE
     if req_file.is_file():
         print(f"\n  📦 '{item_name}' has Python dependencies.")
         print(f"     Install them with:\n")
-        print(f"     pip install -r {req_file}\n")
+        print(f"     pip install -r {shlex.quote(str(req_file))}\n")
 
 
 def cmd_list(
@@ -726,7 +727,7 @@ def cmd_install(
         if not written:
             return
 
-    if not dry_run and target_spec.mode == "copy":
+    if not dry_run and target_spec.mode == "copy" and item.type == "skill":
         _notify_requirements(dst, item.name)
 
     if not dry_run:
@@ -1252,7 +1253,8 @@ def cmd_sync(
             _sync_append(item, src=src, dst=dst)
         else:
             _sync_copy(item, src=src, dst=dst)
-            _notify_requirements(dst, item.name)
+            if item.type == "skill":
+                _notify_requirements(dst, item.name)
 
         # Re-inject steering (idempotent — skips if already present).
         inject_steering(dest, tool, item, steering_roots, dry_run=False)
