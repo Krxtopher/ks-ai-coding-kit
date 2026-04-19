@@ -284,7 +284,15 @@ def load_catalog(repo_root: Path) -> list[CatalogItem]:
     raw = load_yaml(catalog_path)
     items: list[CatalogItem] = []
     for data in raw.get("items", []):
-        item = CatalogItem.from_dict(data)
+        try:
+            item = CatalogItem.from_dict(data)
+        except (ValueError, KeyError) as exc:
+            name = data.get("name", "<unknown>")
+            print(
+                f"Error: invalid catalog entry '{name}': {exc}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
         # For skills, read steering-inject from the SKILL.md metadata.
         if item.type == "skill":
             item.steering_inject = _read_skill_steering_inject(repo_root, item.source)
@@ -537,8 +545,7 @@ def cmd_install(
     if target_spec.mode == "append":
         written = _install_append(item, src=src, dst=dst, dry_run=dry_run)
     else:
-        _install_copy(item, src=src, dst=dst, dry_run=dry_run)
-        written = True  # copy mode handles its own skip via interactive prompt
+        written = _install_copy(item, src=src, dst=dst, dry_run=dry_run)
 
     if not dry_run and written:
         # Inject steering text into the tool's root steering file if configured.
@@ -559,21 +566,25 @@ def _install_copy(
     src: Path,
     dst: Path,
     dry_run: bool,
-) -> None:
-    """Install by copying source to destination."""
+) -> bool:
+    """Install by copying source to destination.
+
+    Returns ``True`` if the content was (or would be) written, ``False`` if
+    the user declined to overwrite an existing target.
+    """
     if dry_run:
         print(f"[dry-run] Would copy:")
         print(f"  {src}")
         print(f"  → {dst}")
         if dst.exists() or dst.is_symlink():
             print(f"  ⚠ Destination already exists and would be overwritten.")
-        return
+        return True
 
     if dst.exists() or dst.is_symlink():
         response = input(f"'{dst}' already exists. Overwrite? [y/N] ").strip().lower()
         if response != "y":
             print("Skipped.")
-            return
+            return False
         if dst.is_dir() and not dst.is_symlink():
             shutil.rmtree(dst)
         else:
@@ -587,6 +598,7 @@ def _install_copy(
         shutil.copy2(src, dst)
 
     print(f"✓ Installed '{item.name}' → {dst}")
+    return True
 
 
 def _append_marker_open(name: str) -> str:
@@ -770,6 +782,14 @@ def _sync_append(item: CatalogItem, *, src: Path, dst: Path) -> None:
 
     marker_open = _append_marker_open(item.name)
     marker_close = _append_marker_close(item.name)
+
+    if src.is_dir():
+        print(
+            f"Skipping '{item.name}': append mode requires a file source, "
+            f"but got directory {src}",
+        )
+        return
+
     content = src.read_text()
     block = f"\n{marker_open}\n{content}\n{marker_close}\n"
 
