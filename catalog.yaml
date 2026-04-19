@@ -2,7 +2,7 @@
 # Each entry defines an installable item with its source path,
 # description, and per-tool install targets.
 #
-# Target paths use {dest} as a placeholder for the user's project root.
+# Target paths are relative to the user's project root (--dest).
 # A null target means the item is not compatible with that tool.
 #
 # Append-mode targets support a prioritized file list:

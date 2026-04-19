@@ -14,7 +14,7 @@ AI coding tools let you customize agent behavior through instruction files in yo
 | GitHub Copilot | Custom instructions | `.github/copilot-instructions.md` (also reads `AGENTS.md`) |
 | Cursor | Rules | `.cursor/rules/*.mdc` (also reads `AGENTS.md`) |
 
-All of these tools read `AGENTS.md` at the repo root, making it the best single target for cross-tool instructions. The [installer](../install.py) appends instruction content to `AGENTS.md` in your project.
+All of these tools read `AGENTS.md` at the repo root, making it a strong single target for cross-tool instructions. The [installer](../install.py) appends instruction content to the configured steering/instructions file in your project, which may resolve to `CLAUDE.md` for Claude Code when present and otherwise to `AGENTS.md`.
 
 ## Format
 
