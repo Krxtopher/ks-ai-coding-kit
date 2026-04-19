@@ -21,7 +21,7 @@ Reusable extensions for AI coding tools — skills, hooks, and agent instruction
 
 ### Agent Instructions
 
-Reusable instruction sets — coding standards, project context, workflows — designed to be appended to your project's `AGENTS.md`. All major AI coding tools read this file natively.
+Reusable instruction sets — coding standards, project context, workflows — designed to be appended to your project's `AGENTS.md`. All tools supported by this kit read this file natively.
 
 ## Quick Start
 

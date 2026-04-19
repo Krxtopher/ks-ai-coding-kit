@@ -19,10 +19,13 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
+import os
 import re
 import shutil
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -213,8 +216,8 @@ class TargetSpec:
 
     @staticmethod
     def _file_list_ok(val: list) -> bool:
-        """Return True if every element is a non-empty string."""
-        return all(isinstance(v, str) and v for v in val)
+        """Return True if the list is non-empty and every element is a non-empty string."""
+        return bool(val) and all(isinstance(v, str) and v for v in val)
 
     @classmethod
     def from_value(cls, value: object) -> Optional["TargetSpec"]:
@@ -553,6 +556,8 @@ def _resolve_steering_root(
     already exists under *dest*, or the last entry if none exist.
     """
     candidates = steering_roots.get(tool, [STEERING_ROOT_DEFAULT])
+    if not candidates:
+        candidates = [STEERING_ROOT_DEFAULT]
     for candidate in candidates:
         if (dest / candidate).exists():
             return candidate
@@ -771,10 +776,10 @@ def _append_marker_close(name: str) -> str:
 
 def _validate_marker_name(name: str) -> None:
     """Raise ValueError if *name* would break an HTML comment marker."""
-    if "--" in name or ">" in name:
+    if "--" in name or name.endswith("-"):
         raise ValueError(
-            f"Item name {name!r} contains '--' or '>' which would corrupt "
-            f"HTML comment markers. Rename the catalog entry."
+            f"Item name {name!r} contains '--' or ends with '-' which is not "
+            f"safe inside HTML comment markers. Rename the catalog entry."
         )
 
 
@@ -815,6 +820,11 @@ def _install_append(
         sys.exit(1)
     content = src.read_text()
 
+    # Guard against unsafe or unsupported destination types.
+    if dst.exists() and dst.is_symlink():
+        print(f"Error: cannot append to symlink target {dst}.", file=sys.stderr)
+        sys.exit(1)
+
     # Guard against target being a directory.
     if dst.exists() and dst.is_dir():
         print(f"Error: cannot append to directory target {dst}.", file=sys.stderr)
@@ -846,11 +856,24 @@ def _install_append(
     # Skip the separator for new or empty files to avoid a leading blank line.
     separator = "\n" if existing_content else ""
 
-    with dst.open("w" if existing_content is not None else "x") as f:
-        if existing_content is not None:
-            f.write(f"{existing_content}{separator}{block}")
-        else:
-            f.write(block)
+    new_content = (
+        f"{existing_content}{separator}{block}"
+        if existing_content is not None
+        else block
+    )
+
+    # Write to a temp file in the same directory and atomically replace,
+    # so a crash mid-write can't corrupt the user's existing file.
+    fd, tmp_path = tempfile.mkstemp(dir=dst.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(new_content)
+        os.replace(tmp_path, dst)
+    except BaseException:
+        # Clean up the temp file on any failure.
+        with contextlib.suppress(OSError):
+            os.unlink(tmp_path)
+        raise
 
     print(f"✓ Installed '{item.name}' → {dst} (appended)")
 
@@ -993,6 +1016,7 @@ def _uninstall_append(
             f"but closing marker is missing or corrupted. "
             f"Removing manifest entry to avoid a stuck state.",
         )
+        remove_steering(dest, tool, item, steering_roots, dry_run=False)
         _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
         return
 
@@ -1003,6 +1027,7 @@ def _uninstall_append(
             f"not be removed; file may be corrupted. "
             f"Removing manifest entry to avoid a stuck state.",
         )
+        remove_steering(dest, tool, item, steering_roots, dry_run=False)
         _remove_manifest_entry(repo_root, name=item.name, dest=dest, tool=tool)
         return
 
