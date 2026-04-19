@@ -19,9 +19,13 @@ ks-ai-coding-kit/
 ## Conventions
 
 - **Catalog** (`catalog.yaml`) is the source of truth for all installable items. Each entry defines name, type, source path, description, compatibility, and per-tool install targets.
-- **Installer** (`install.py`) reads the catalog and copies items to the correct location. Supports `list`, `install`, `uninstall`, `sync`, `--dry-run`, `--tool`, `--type`. Prompts interactively for `--tool` when omitted. No dependencies beyond Python 3.10+ (PyYAML optional).
+- **Installer** (`install.py`) reads the catalog and installs items to the correct location. Supports `list`, `install`, `uninstall`, `sync`, `--dry-run`, `--tool`, `--type`. Prompts interactively for `--tool` when omitted. No dependencies beyond Python 3.10+ (PyYAML optional).
+- **Install targets** can use two modes:
+  - **copy** (default) — plain string target, e.g. `kiro: .kiro/skills/my-skill`. The source is copied to this path.
+  - **append** — object target, e.g. `codex: { file: AGENTS.md, mode: append }`. The source content is appended to the target file as a paired HTML comment block: opening marker `<!-- ks-ai-coding-kit:append:<name> -->`, then the content, then closing marker `<!-- /ks-ai-coding-kit:append:<name> -->` for clean uninstall. The `file` value can be a prioritized list (e.g. `{ file: [CLAUDE.md, AGENTS.md], mode: append }`); the installer picks the first file that exists in the destination, falling back to the last entry if none exist.
 - **Install manifest** (`.install-manifest.json`) is a local, gitignored registry of installed items. Written automatically by `install`, and normally updated by `uninstall` when it removes an installed target. Used by `sync` to know which targets to update.
-- **Steering injection**: Skills can define a `steering-inject` key under `metadata` in their `SKILL.md` front-matter. On install, the installer appends this text to the tool's root steering file (`AGENTS.md` by default, `CLAUDE.md` for Claude Code). The injected block is wrapped in HTML comment markers (`<!-- ks-ai-coding-kit:<name> -->`) for clean uninstall.
+- **Steering injection**: Skills can define a `steering-inject` key under `metadata` in their `SKILL.md` front-matter. On install, the installer appends this text to the tool's steering root file in the target project. The injected block is wrapped in HTML comment markers (`<!-- ks-ai-coding-kit:<name> -->`) for clean uninstall.
+- **Steering roots** (`steering-roots` in `catalog.yaml`) define per-tool steering root files. Supports a prioritized list (e.g. `claude-code: [CLAUDE.md, AGENTS.md]`); the installer picks the first file that exists, falling back to the last entry. Defaults to `AGENTS.md` for tools not listed.
 - **Agent instructions** are standalone Markdown files under `agent-instructions/`. They may use YAML front-matter for metadata (name, description, compatibility, tags). These are tool-agnostic — the installer places them in the right location for each tool.
 - **Skills** follow the Agent Skills open standard. Each skill lives in its own subdirectory under `skills/` and contains a `SKILL.md` as its entry point.
 - **Hooks** are JSON files following the Kiro hook schema (see `hooks/README.md`).
@@ -33,13 +37,15 @@ ks-ai-coding-kit/
 | Directory | Compatibility | Description |
 |-----------|---------------|-------------|
 | `skills/agent-memory` | Kiro, Claude Code, Codex, Cursor | Persistent AI memory system — project-scoped and user-scoped memory files under `.agent-memory/` |
+| `skills/bedrock-vision` | Kiro, Claude Code, Codex, Cursor | Analyze images from the workspace using Bedrock vision models and extract technical metadata (dimensions, file size, MIME type, bit depth, channels) |
 | `skills/current-time` | Kiro, Claude Code, Codex, Cursor | Looks up the current date and time in both local time and UTC, accurate to the second |
 | `skills/doc-convert` | Kiro, Claude Code, Codex, Cursor | Document conversion using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
-| `skills/bedrock-vision` | Kiro, Claude Code, Codex, Cursor | Analyze images from the workspace using Bedrock vision models and extract technical metadata (dimensions, file size, MIME type, bit depth, channels) |
 
 ### Agent Instructions
 
-No agent instructions are currently available. All capabilities have been migrated to skills.
+| File | Compatibility | Description |
+|------|---------------|-------------|
+| `agent-instructions/documentation-standards.md` | Kiro, Claude Code, Codex, Cursor | Guidelines for when and how to update README.md and agent-facing docs |
 
 ### Hooks
 

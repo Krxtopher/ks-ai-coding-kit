@@ -2,8 +2,20 @@
 # Each entry defines an installable item with its source path,
 # description, and per-tool install targets.
 #
-# Target paths use {dest} as a placeholder for the user's project root.
+# Target paths are relative to the user's project root (--dest).
 # A null target means the item is not compatible with that tool.
+#
+# Append-mode targets support a prioritized file list:
+#   claude-code: { file: [CLAUDE.md, AGENTS.md], mode: append }
+# The installer uses the first file that exists in the destination,
+# falling back to the last entry if none exist.
+#
+# steering-roots defines the per-tool file used for steering-inject
+# content from skills. Supports the same prioritized list syntax.
+# Defaults to AGENTS.md for any tool not listed here.
+
+steering-roots:
+  claude-code: [CLAUDE.md, AGENTS.md]
 
 items:
   - name: agent-memory
@@ -14,8 +26,8 @@ items:
     targets:
       kiro: .kiro/skills/agent-memory
       claude-code: .claude/skills/agent-memory
-      codex: skills/agent-memory
-      cursor: skills/agent-memory
+      codex: .agents/skills/agent-memory
+      cursor: .agents/skills/agent-memory
 
   - name: doc-convert
     type: skill
@@ -25,8 +37,8 @@ items:
     targets:
       kiro: .kiro/skills/doc-convert
       claude-code: .claude/skills/doc-convert
-      codex: skills/doc-convert
-      cursor: skills/doc-convert
+      codex: .agents/skills/doc-convert
+      cursor: .agents/skills/doc-convert
 
   - name: current-time
     type: skill
@@ -36,8 +48,8 @@ items:
     targets:
       kiro: .kiro/skills/current-time
       claude-code: .claude/skills/current-time
-      codex: skills/current-time
-      cursor: skills/current-time
+      codex: .agents/skills/current-time
+      cursor: .agents/skills/current-time
 
   - name: bedrock-vision
     type: skill
@@ -47,8 +59,8 @@ items:
     targets:
       kiro: .kiro/skills/bedrock-vision
       claude-code: .claude/skills/bedrock-vision
-      codex: skills/bedrock-vision
-      cursor: skills/bedrock-vision
+      codex: .agents/skills/bedrock-vision
+      cursor: .agents/skills/bedrock-vision
 
   - name: shell-command-explainer
     type: hook
@@ -57,3 +69,14 @@ items:
     compatibility: [kiro]
     targets:
       kiro: .kiro/hooks/shell-command-explainer.kiro.hook
+
+  - name: documentation-standards
+    type: instruction
+    source: agent-instructions/documentation-standards.md
+    description: Guidelines for when and how to update README.md and agent-facing docs
+    compatibility: [kiro, claude-code, codex, cursor]
+    targets:
+      kiro: { file: AGENTS.md, mode: append }
+      claude-code: { file: [CLAUDE.md, AGENTS.md], mode: append }
+      codex: { file: AGENTS.md, mode: append }
+      cursor: { file: AGENTS.md, mode: append }
