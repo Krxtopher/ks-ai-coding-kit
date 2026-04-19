@@ -663,15 +663,21 @@ def _install_append(
             print(f"'{item.name}' already appended to {dst}, skipping.")
         return
 
-    block = f"\n{marker_open}\n{content}\n{marker_close}\n"
+    block = f"{marker_open}\n{content}\n{marker_close}\n"
 
     if dry_run:
         print(f"[dry-run] Would append '{item.name}' to {dst}")
         return
 
     dst.parent.mkdir(parents=True, exist_ok=True)
+
+    # Prepend a blank-line separator when appending to a file that already
+    # has content, so the marker block doesn't run into existing text.
+    # Skip the separator for new or empty files to avoid a leading blank line.
+    separator = "\n" if dst.exists() and dst.stat().st_size > 0 else ""
+
     with dst.open("a") as f:
-        f.write(block)
+        f.write(f"{separator}{block}")
 
     print(f"✓ Installed '{item.name}' → {dst} (appended)")
 
@@ -702,6 +708,20 @@ def cmd_uninstall(
         None,
     )
     mode = manifest_entry.get("mode", target_spec.mode) if manifest_entry else target_spec.mode
+
+    # Prefer the resolved target path stored at install time. Fall back
+    # to the current catalog target for manifests written before this
+    # field was added.
+    if manifest_entry and "target" in manifest_entry:
+        stored = Path(manifest_entry["target"])
+        dest_root = dest.resolve(strict=False)
+        if stored.is_absolute():
+            try:
+                stored.relative_to(dest_root)
+                dst = stored
+            except ValueError:
+                pass  # stored path outside dest — fall through to catalog default
+        # else: non-absolute stored path — fall through to catalog default
 
     if mode == "append":
         _uninstall_append(item, repo_root=repo_root, dst=dst, dest=dest, tool=tool, dry_run=dry_run)
@@ -835,7 +855,7 @@ def _sync_append(item: CatalogItem, *, src: Path, dst: Path) -> None:
         return
 
     content = src.read_text()
-    block = f"\n{marker_open}\n{content}\n{marker_close}\n"
+    block = f"{marker_open}\n{content}\n{marker_close}\n"
 
     if dst.exists():
         if dst.is_dir():
@@ -854,8 +874,12 @@ def _sync_append(item: CatalogItem, *, src: Path, dst: Path) -> None:
     else:
         dst.parent.mkdir(parents=True, exist_ok=True)
 
+    # Prepend a blank-line separator when appending to a file that already
+    # has content, so the marker block doesn't run into existing text.
+    separator = "\n" if dst.exists() and dst.stat().st_size > 0 else ""
+
     with dst.open("a") as f:
-        f.write(block)
+        f.write(f"{separator}{block}")
 
     print(f"✓ Synced '{item.name}' → {dst} (appended)")
 
