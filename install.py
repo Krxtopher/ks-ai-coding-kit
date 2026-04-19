@@ -6,7 +6,6 @@ and other extensions into the correct location for your AI coding tool.
 
 Usage:
     python install.py list
-    python install.py list --tag safety
     python install.py list --type hook
     python install.py list --tool kiro
     python install.py install agent-memory --dest /path/to/project --tool kiro
@@ -142,7 +141,6 @@ class CatalogItem:
     type: str
     source: str
     description: str
-    tags: list[str] = field(default_factory=list)
     compatibility: list[str] = field(default_factory=list)
     targets: dict[str, Optional[str]] = field(default_factory=dict)
     steering_inject: Optional[str] = None
@@ -154,7 +152,6 @@ class CatalogItem:
             type=data["type"],
             source=data["source"],
             description=data.get("description", ""),
-            tags=data.get("tags", []),
             compatibility=data.get("compatibility", []),
             targets=data.get("targets", {}),
         )
@@ -444,14 +441,11 @@ def remove_steering(
 def cmd_list(
     catalog: list[CatalogItem],
     *,
-    tag: Optional[str] = None,
     item_type: Optional[str] = None,
     tool: Optional[str] = None,
 ) -> None:
     """Print a filtered list of catalog items."""
     filtered = catalog
-    if tag:
-        filtered = [i for i in filtered if tag in i.tags]
     if item_type:
         filtered = [i for i in filtered if i.type == item_type]
     if tool:
@@ -761,7 +755,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     # list
     ls = sub.add_parser("list", help="List available extensions")
-    ls.add_argument("--tag", help="Filter by tag")
     ls.add_argument("--type", dest="item_type", help="Filter by type (instruction, hook, skill)")
     ls.add_argument("--tool", help="Filter by compatible tool")
 
@@ -795,7 +788,7 @@ def main() -> None:
     catalog = load_catalog(repo_root)
 
     if args.command == "list":
-        cmd_list(catalog, tag=args.tag, item_type=args.item_type, tool=args.tool)
+        cmd_list(catalog, item_type=args.item_type, tool=args.tool)
         return
 
     if args.command == "sync":

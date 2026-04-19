@@ -19,13 +19,14 @@ import sys
 from pathlib import Path
 
 try:
-    from PIL import Image
+    from PIL import Image, UnidentifiedImageError
 except ImportError:
     print("Error: Pillow is required. Install it with: pip install Pillow", file=sys.stderr)
     sys.exit(1)
 
 try:
     import boto3
+    from botocore.exceptions import BotoCoreError, ClientError
 except ImportError:
     print("Error: boto3 is required. Install it with: pip install boto3", file=sys.stderr)
     sys.exit(1)
@@ -39,6 +40,16 @@ DEFAULT_PROMPT = (
     "Describe this image in detail. Include the subject matter, composition, "
     "colors, text (if any), and any notable visual elements. Be thorough but concise."
 )
+
+# Bedrock Converse ImageBlock supports exactly these formats.
+# See https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_ImageBlock.html
+PIL_FORMAT_TO_BEDROCK: dict[str, str] = {
+    "PNG": "png",
+    "JPEG": "jpeg",
+    "GIF": "gif",
+    "WEBP": "webp",
+}
+BEDROCK_SUPPORTED_FORMATS = sorted(PIL_FORMAT_TO_BEDROCK.values())
 
 # Mapping from PIL mode to human-readable channel info
 MODE_INFO: dict[str, tuple[int, str]] = {
@@ -95,13 +106,15 @@ def get_image_metadata(image_path: Path) -> dict:
         mode = img.mode
         channels, channel_desc = MODE_INFO.get(mode, (len(img.getbands()), mode))
         bit_depth = BIT_DEPTH.get(mode, channels * 8)
+        pil_format = img.format or ""
 
     return {
         "file_name": image_path.name,
-        "file_path": str(image_path.resolve()),
+        "file_path": str(image_path),
         "file_size_bytes": file_size,
         "file_size_human": _human_size(file_size),
         "mime_type": mime_type,
+        "pil_format": pil_format,
         "width": width,
         "height": height,
         "bit_depth": bit_depth,
@@ -112,23 +125,27 @@ def get_image_metadata(image_path: Path) -> dict:
 
 def describe_image(
     image_path: Path,
+    *,
+    pil_format: str,
     model_id: str = DEFAULT_MODEL_ID,
     prompt: str = DEFAULT_PROMPT,
     region: str = DEFAULT_REGION,
     profile: str | None = None,
 ) -> str:
-    """Send an image to a Bedrock vision model and return its description."""
-    image_bytes = image_path.read_bytes()
-    mime_type, _ = mimetypes.guess_type(str(image_path))
+    """Send an image to a Bedrock vision model and return its description.
 
-    # Map MIME type to Bedrock's expected format string
-    format_map = {
-        "image/jpeg": "jpeg",
-        "image/png": "png",
-        "image/gif": "gif",
-        "image/webp": "webp",
-    }
-    image_format = format_map.get(mime_type, "jpeg")
+    *pil_format* is the format string reported by Pillow (e.g. "PNG", "JPEG").
+    Raises ValueError if the format is not supported by Bedrock Converse.
+    """
+    image_format = PIL_FORMAT_TO_BEDROCK.get(pil_format.upper())
+    if image_format is None:
+        supported = ", ".join(BEDROCK_SUPPORTED_FORMATS)
+        raise ValueError(
+            f"Image format {pil_format or 'unknown'!r} is not supported by "
+            f"Bedrock Converse. Supported formats: {supported}."
+        )
+
+    image_bytes = image_path.read_bytes()
 
     session_kwargs: dict = {}
     if profile:
@@ -162,11 +179,12 @@ def describe_image(
 
 def _human_size(num_bytes: int) -> str:
     """Convert bytes to a human-readable string."""
+    size = float(num_bytes)
     for unit in ("B", "KB", "MB", "GB"):
-        if abs(num_bytes) < 1024:
-            return f"{num_bytes:.1f} {unit}" if unit != "B" else f"{num_bytes} {unit}"
-        num_bytes /= 1024  # type: ignore[assignment]
-    return f"{num_bytes:.1f} TB"
+        if abs(size) < 1024:
+            return f"{num_bytes} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} TB"
 
 
 def format_output(metadata: dict, description: str) -> str:
@@ -189,7 +207,7 @@ def format_output(metadata: dict, description: str) -> str:
     return "\n".join(lines)
 
 
-def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Describe an image using Bedrock vision models and extract metadata."
@@ -221,12 +239,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         dest="output_json",
         help="Output as JSON instead of formatted Markdown",
     )
-    return parser.parse_args(argv)
+    return parser.parse_args()
 
 
-def main(argv: list[str] | None = None) -> None:
+def main() -> None:
     """Main entry point."""
-    args = parse_args(argv)
+    args = parse_args()
 
     image_path: Path = args.image_path
     if not image_path.exists():
@@ -239,21 +257,35 @@ def main(argv: list[str] | None = None) -> None:
     # Extract metadata (no network call needed)
     try:
         metadata = get_image_metadata(image_path)
-    except Exception as e:
-        logger.error("Failed to read image metadata: %s", e)
+    except UnidentifiedImageError:
+        logger.error("Not a recognized image format: %s", image_path)
+        sys.exit(1)
+    except OSError as e:
+        logger.error("Failed to read image: %s", e)
         sys.exit(1)
 
     # Get AI description from Bedrock
     try:
         description = describe_image(
             image_path,
+            pil_format=metadata["pil_format"],
             model_id=args.model,
             prompt=args.prompt,
             region=args.region,
             profile=args.profile,
         )
-    except Exception as e:
-        logger.error("Bedrock API call failed: %s", e)
+    except ValueError as e:
+        logger.error("%s", e)
+        sys.exit(1)
+    except ClientError as e:
+        # Service-side errors from Bedrock (validation, throttling, access-denied).
+        code = e.response.get("Error", {}).get("Code", "Unknown")
+        message = e.response.get("Error", {}).get("Message", str(e))
+        logger.error("Bedrock rejected the request (%s): %s", code, message)
+        sys.exit(1)
+    except BotoCoreError as e:
+        # Client-side botocore errors (missing creds, unknown profile, network, etc.).
+        logger.error("AWS client error: %s", e)
         sys.exit(1)
 
     # Output

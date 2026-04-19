@@ -19,7 +19,7 @@ This skill gives you access to the exact current date and time. Use it to ground
 Run this shell command:
 
 ```bash
-date '+Local: %Y-%m-%d %H:%M:%S %z (%Z)' && date -u '+  UTC: %Y-%m-%d %H:%M:%S UTC'
+python -c "from datetime import datetime,timezone;n=datetime.now().astimezone();u=n.astimezone(timezone.utc);print(f'Local: {n:%Y-%m-%d %H:%M:%S %z (%Z)}');print(f'  UTC: {u:%Y-%m-%d %H:%M:%S} UTC')"
 ```
 
 Example output:
@@ -29,7 +29,7 @@ Local: 2026-04-17 14:32:07 -0700 (PDT)
   UTC: 2026-04-17 21:32:07 UTC
 ```
 
-No scripts or dependencies required — just the `date` command available on any Unix-like system.
+No dependencies beyond Python 3.10+ (already required by the kit). Uses a single clock reading so local and UTC are always consistent.
 
 ## When to Run
 

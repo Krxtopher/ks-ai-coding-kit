@@ -1,6 +1,6 @@
 # Catalog of available KS AI Coding Kit extensions.
 # Each entry defines an installable item with its source path,
-# description, tags, and per-tool install targets.
+# description, and per-tool install targets.
 #
 # Target paths use {dest} as a placeholder for the user's project root.
 # A null target means the item is not compatible with that tool.
@@ -10,7 +10,6 @@ items:
     type: skill
     source: skills/agent-memory
     description: Persistent AI memory system with project-scoped and user-scoped memory files
-    tags: [memory, context, persistence]
     compatibility: [kiro, claude-code, codex, cursor]
     targets:
       kiro: .kiro/skills/agent-memory
@@ -22,7 +21,6 @@ items:
     type: skill
     source: skills/doc-convert
     description: Convert documents between formats using pandoc with a styled Word reference template
-    tags: [pandoc, conversion, markdown, word, docx, html, pdf, documents]
     compatibility: [kiro, claude-code, codex, cursor]
     targets:
       kiro: .kiro/skills/doc-convert
@@ -34,7 +32,6 @@ items:
     type: skill
     source: skills/current-time
     description: Looks up the current date and time in both local time and UTC, accurate to the second
-    tags: [time, date, clock, timezone, utc]
     compatibility: [kiro, claude-code, codex, cursor]
     targets:
       kiro: .kiro/skills/current-time
@@ -46,7 +43,6 @@ items:
     type: skill
     source: skills/bedrock-vision
     description: Analyze images from the workspace using Bedrock vision models and extract technical metadata
-    tags: [image, vision, describe, screenshot, diagram, photo, bedrock, nova]
     compatibility: [kiro, claude-code, codex, cursor]
     targets:
       kiro: .kiro/skills/bedrock-vision
@@ -58,7 +54,6 @@ items:
     type: hook
     source: hooks/shell-command-explainer.kiro.hook
     description: Explains shell commands before execution with safety/trust analysis
-    tags: [safety, shell, trust, security]
     compatibility: [kiro]
     targets:
       kiro: .kiro/hooks/shell-command-explainer.kiro.hook

@@ -4,7 +4,7 @@ description: >
   Analyze images from the workspace by extracting technical metadata and generating
   AI-powered descriptions via Amazon Bedrock. Use when the user references an image file
   or asks you to look at, describe, or analyze an image. Activate whenever you see image
-  file paths (.png, .jpg, .jpeg, .gif, .webp, .bmp, .tiff) mentioned in conversation.
+  file paths (.png, .jpg, .jpeg, .gif, .webp) mentioned in conversation.
 compatibility: Kiro IDE, Claude Code, Codex, Cursor
 metadata:
   author: ks-ai-coding-kit
@@ -40,7 +40,7 @@ pip install boto3 Pillow
 
 If the user chooses **Other**, ask them for the exact Bedrock model ID to use.
 
-**Do not skip this step.** Always ask, every time. Do not assume a default.
+Ask every time unless the user has explicitly stated a preferred default.
 
 ### Step 2: Run the Script
 
@@ -101,7 +101,7 @@ The image shows a desktop application window with a dark theme...
 
 ## Important
 
-- **Always ask which model to use.** Present the four options listed above every time. Never skip this or assume a default.
+- **Ask which model to use.** Present the four options listed in Step 1 every time, unless the user has explicitly stated a preferred default.
 - **Tailor the prompt.** Don't just use the default prompt. Craft a `--prompt` that matches what the user is actually asking. This dramatically improves the quality of the response.
 - **Use the output naturally.** Don't dump the raw output to the user. Read it, understand it, and incorporate it into your response as if you looked at the image yourself.
 - **Handle errors gracefully.** If the script fails (missing credentials, unsupported format), tell the user what went wrong and suggest alternatives (like dragging the image into chat).
