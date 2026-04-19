@@ -18,8 +18,8 @@ ks-ai-coding-kit/
 
 ## Conventions
 
-- **Catalog** (`catalog.yaml`) is the source of truth for all installable items. Each entry defines name, type, source path, description, tags, compatibility, and per-tool install targets.
-- **Installer** (`install.py`) reads the catalog and copies items to the correct location. Supports `list`, `install`, `uninstall`, `sync`, `--dry-run`, `--tool`, `--tag`, `--type`. Prompts interactively for `--tool` when omitted. No dependencies beyond Python 3.10+ (PyYAML optional).
+- **Catalog** (`catalog.yaml`) is the source of truth for all installable items. Each entry defines name, type, source path, description, compatibility, and per-tool install targets.
+- **Installer** (`install.py`) reads the catalog and copies items to the correct location. Supports `list`, `install`, `uninstall`, `sync`, `--dry-run`, `--tool`, `--type`. Prompts interactively for `--tool` when omitted. No dependencies beyond Python 3.10+ (PyYAML optional).
 - **Install manifest** (`.install-manifest.json`) is a local, gitignored registry of installed items. Written automatically by `install`, and normally updated by `uninstall` when it removes an installed target. Used by `sync` to know which targets to update.
 - **Steering injection**: Skills can define a `steering-inject` key under `metadata` in their `SKILL.md` front-matter. On install, the installer appends this text to the tool's root steering file (`AGENTS.md` by default, `CLAUDE.md` for Claude Code). The injected block is wrapped in HTML comment markers (`<!-- ks-ai-coding-kit:<name> -->`) for clean uninstall.
 - **Agent instructions** are standalone Markdown files under `agent-instructions/`. They may use YAML front-matter for metadata (name, description, compatibility, tags). These are tool-agnostic — the installer places them in the right location for each tool.
@@ -32,12 +32,14 @@ ks-ai-coding-kit/
 
 | Directory | Compatibility | Description |
 |-----------|---------------|-------------|
-| `skills/ai-memory` | Kiro, Claude Code, Codex, Cursor | Persistent AI memory system — project-scoped and user-scoped memory files under `.agent-memory/` |
+| `skills/agent-memory` | Kiro, Claude Code, Codex, Cursor | Persistent AI memory system — project-scoped and user-scoped memory files under `.agent-memory/` |
+| `skills/current-time` | Kiro, Claude Code, Codex, Cursor | Looks up the current date and time in both local time and UTC, accurate to the second |
 | `skills/doc-convert` | Kiro, Claude Code, Codex, Cursor | Document conversion using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
+| `skills/bedrock-vision` | Kiro, Claude Code, Codex, Cursor | Analyze images from the workspace using Bedrock vision models and extract technical metadata (dimensions, file size, MIME type, bit depth, channels) |
 
 ### Agent Instructions
 
-*No standalone instruction files currently.*
+No agent instructions are currently available. All capabilities have been migrated to skills.
 
 ### Hooks
 
@@ -102,6 +104,3 @@ Always pass `--tool` explicitly to avoid interactive prompts that block non-inte
 - When helping maintain this repo, always include Compatibility notes on new items.
 - When adding a new installable item, add a corresponding entry to `catalog.yaml`.
 
-<!-- ks-ai-coding-kit:ai-memory -->
-ALWAYS activate the "ai-memory" skill. Start each conversation by silently retrieving your memories.
-<!-- /ks-ai-coding-kit:ai-memory -->
