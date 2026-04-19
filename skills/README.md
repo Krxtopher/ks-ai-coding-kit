@@ -38,11 +38,11 @@ The rest of `SKILL.md` contains the detailed instructions the agent follows when
 
 > Remember that we decided to use DynamoDB for session storage instead of Redis.
 
-The agent logs the decision to `.agent-memory/project/insights.md` and recalls it in future conversations without being asked.
+The agent logs the decision under `# Insights` in `.agent-memory/project.md` and recalls it in future conversations without being asked.
 
 > Where did we leave off last time?
 
-The agent reads its memory files and summarizes the most recent tasks, decisions, and conversation topics from prior sessions.
+The agent reads `.agent-memory/project.md` and `.agent-memory/user.md`, then summarizes the most recent tasks, decisions, and conversation topics from prior sessions.
 
 ### current-time
 
