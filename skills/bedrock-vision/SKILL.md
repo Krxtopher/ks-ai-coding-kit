@@ -21,11 +21,7 @@ This skill lets you analyze image files from the user's workspace. It extracts t
 - `boto3` — AWS SDK
 - `Pillow` — image metadata extraction
 
-Install if needed:
-
-```bash
-pip install boto3 Pillow
-```
+Dependencies are listed in `requirements.txt` (bundled with this skill).
 
 ## How to Use
 

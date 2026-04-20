@@ -27,7 +27,7 @@ ks-ai-coding-kit/
 - **Steering injection**: Skills can define a `steering-inject` key under `metadata` in their `SKILL.md` front-matter. On install, the installer appends this text to the tool's steering root file in the target project. The injected block is wrapped in HTML comment markers (`<!-- ks-ai-coding-kit:<name> -->`) for clean uninstall.
 - **Steering roots** (`steering-roots` in `catalog.yaml`) define per-tool steering root files. Supports a prioritized list (e.g. `claude-code: [CLAUDE.md, AGENTS.md]`); the installer picks the first file that exists, falling back to the last entry. Defaults to `AGENTS.md` for tools not listed.
 - **Agent instructions** are standalone Markdown files under `agent-instructions/`. They may use YAML front-matter for metadata (name, description, compatibility, tags). These are tool-agnostic — the installer places them in the right location for each tool.
-- **Skills** follow the Agent Skills open standard. Each skill lives in its own subdirectory under `skills/` and contains a `SKILL.md` as its entry point.
+- **Skills** follow the Agent Skills open standard. Each skill lives in its own subdirectory under `skills/` and contains a `SKILL.md` as its entry point. Skills with Python dependencies include a `requirements.txt` — the installer detects this on install/sync and prints a `pip install -r` command for the user.
 - **Hooks** are JSON files following the Kiro hook schema (see `hooks/README.md`).
 
 ## Available Items

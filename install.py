@@ -23,6 +23,7 @@ import contextlib
 import json
 import os
 import re
+import shlex
 import shutil
 import sys
 import tempfile
@@ -39,6 +40,7 @@ except ImportError:
 CATALOG_FILE = "catalog.yaml"
 MANIFEST_FILE = ".install-manifest.json"
 SKILL_ENTRY = "SKILL.md"
+REQUIREMENTS_FILE = "requirements.txt"
 
 # Steering injection: default file when no steering-roots entry exists.
 STEERING_ROOT_DEFAULT = "AGENTS.md"
@@ -657,6 +659,17 @@ def remove_steering(
 # Commands
 # ---------------------------------------------------------------------------
 
+def _notify_requirements(dst: Path, item_name: str) -> None:
+    """Print a notice if the installed skill contains a requirements.txt."""
+    # Skills are always copied as directories; check for requirements.txt at the root.
+    req_file = dst / REQUIREMENTS_FILE
+    if req_file.is_file():
+        quoted = f'"{req_file}"' if os.name == "nt" else shlex.quote(str(req_file))
+        print(f"\n  📦 '{item_name}' has Python dependencies.")
+        print(f"     Install them with:\n")
+        print(f"     pip install -r {quoted}\n")
+
+
 def cmd_list(
     catalog: list[CatalogItem],
     *,
@@ -714,6 +727,9 @@ def cmd_install(
         written = _install_copy(item, src=src, dst=dst, dry_run=dry_run)
         if not written:
             return
+
+    if not dry_run and target_spec.mode == "copy" and item.type == "skill":
+        _notify_requirements(dst, item.name)
 
     if not dry_run:
         # Inject steering text into the tool's root steering file if configured.
@@ -1238,6 +1254,8 @@ def cmd_sync(
             _sync_append(item, src=src, dst=dst)
         else:
             _sync_copy(item, src=src, dst=dst)
+            if item.type == "skill":
+                _notify_requirements(dst, item.name)
 
         # Re-inject steering (idempotent — skips if already present).
         inject_steering(dest, tool, item, steering_roots, dry_run=False)

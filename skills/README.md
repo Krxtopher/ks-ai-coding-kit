@@ -23,6 +23,8 @@ description: What this skill does
 
 The rest of `SKILL.md` contains the detailed instructions the agent follows when the skill is activated.
 
+Skills with Python script dependencies should include a `requirements.txt` in their directory. The installer detects this file on install and sync, and prints a `pip install -r` command pointing at the installed copy so users know exactly what to run.
+
 ## Contents
 
 | Directory | Description |
