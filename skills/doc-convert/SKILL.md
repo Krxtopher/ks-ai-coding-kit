@@ -153,10 +153,9 @@ The bundled `assets/reference.docx` can be further customized:
 2. Modify the styles (Heading 1, Heading 2, Normal, Source Code, etc.)
 3. Save — pandoc reads styles from the template, not content
 
-The `scripts/customize-reference.py` script can also regenerate the template from pandoc's defaults with the skill's style choices. It requires `python-docx`:
+The `scripts/customize-reference.py` script can also regenerate the template from pandoc's defaults with the skill's style choices. It requires `python-docx` (listed in `requirements.txt`):
 
 ```bash
-pip install python-docx
 pandoc --print-default-data-file reference.docx > base.docx
 python SKILL_PATH/scripts/customize-reference.py base.docx SKILL_PATH/assets/reference.docx
 ```
