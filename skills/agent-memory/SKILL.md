@@ -18,14 +18,17 @@ You have a persistent memory system with two files under `.agent-memory/`:
 
 | File | Scope | Purpose |
 |---|---|---|
-| `.agent-memory/project.md` | Project | Committed to Git. Knowledge that benefits the whole team: architectural decisions, project-specific gotchas, task history, and technical insights about this codebase. |
-| `.agent-memory/user.md` | User | Gitignored. Personal preferences, workflow habits, tool choices, conversation topics, and anything specific to an individual developer. |
-
-> **Note:** Add `.agent-memory/user.md` (not the entire `.agent-memory/` directory) to your project's `.gitignore` so that `project.md` remains tracked by Git.
+| `.agent-memory/project.md` | Project | Committed to Git. Knowledge that benefits the whole team: architectural decisions, project-specific gotchas, task history, lessons learned, and technical insights about this codebase. |
+| `.agent-memory/user.md` | User | Gitignored. Personal preferences, conversation topics, and anything specific to an individual developer. |
 
 ## Deciding Which Scope
 
-Use a simple heuristic: **if the memory would be useful to another developer on this project, it's project-scoped. Otherwise, it's user-scoped.**
+Ask: **would a different developer on this same project benefit from this information?** If yes, it's project-scoped. If it only matters to the individual you're talking to, it's user-scoped.
+
+**When in doubt, prefer `project.md`.** Project-scoped content that happens to be personal is less harmful than project knowledge that gets gitignored and lost.
+
+> [!IMPORTANT]
+> The source of the information doesn't determine the scope. Instructions that come from a single user are often project standards — file organization conventions, naming rules, directory structure, coding patterns, and workflow requirements all belong in `project.md` even if only one person stated them.
 
 ## File Structure
 
@@ -52,9 +55,6 @@ Each file uses top-level headings to separate concerns. Write entries under the 
 # Preferences
 - `YYYY-MM-DD` — Personal preferences, workflow habits, tool choices, style preferences
 
-# Insights
-- `YYYY-MM-DD` — Personal technical insights not relevant to the team
-
 # Topics
 - `YYYY-MM-DD` — Rolling log of recent conversation topics for continuity across sessions
 ```
@@ -72,11 +72,12 @@ You MUST update memory files proactively. Do not wait for an ideal moment — wr
 Use this checklist to recognize when a memory write is needed:
 
 - **User asks you to do something** (build, fix, refactor, investigate, change) → log it under `# Tasks` in `project.md`
-- **User corrects your behavior or assumptions** → log the correction under `# Preferences` in `user.md`
-- **You discover something surprising about the codebase** → log it under `# Insights` in the appropriate file
+- **User corrects your behavior or assumptions about the project** (e.g., "we use PostgreSQL not MySQL", "data files go in `data/`") → log it under `# Insights` in `project.md`
+- **User corrects your personal interaction style** (e.g., "be more concise", "don't use emojis") → log it under `# Preferences` in `user.md`
+- **You discover something surprising about the codebase** → log it under `# Insights` in `project.md`
 - **You make a design decision or trade-off** → log it under `# Insights` in `project.md`
-- **User states a preference or habit** → log it under `# Preferences` in `user.md`
-- **A personal technical insight comes up** → log it under `# Insights` in `user.md`
+- **User states a project convention or standard** (file organization, naming, directory structure, required patterns) → log it under `# Insights` in `project.md`
+- **User states a personal preference or habit** (communication style, editor settings, workflow quirks) → log it under `# Preferences` in `user.md`
 - **Conversation is ending with unfinished work** → update task status under `# Tasks` in `project.md`
 - **A new conversation topic comes up** → log it under `# Topics` in `user.md` (see Conversation Topic Tracking below)
 
@@ -112,11 +113,23 @@ Track conversation topics under `# Topics` in `user.md`. This section holds a sh
 - Keep entries concise — one to two lines each, except for in-flight tasks which can include more detail (status, blockers, next steps).
 - Use bullet points for individual memories.
 - Add a date prefix in `YYYY-MM-DD` format to each entry so stale memories can be identified.
+- **Order entries newest-first** within each section. New entries go at the top of their section, just below the heading. This puts the most recent and relevant context at the top where it's seen first.
 - When a task is completed, remove it from `# Tasks`. Don't let completed tasks accumulate. Distill any lasting insight into `# Insights` first.
 - When a preference or insight is superseded, update or replace the old entry rather than adding a duplicate.
 - Don't ask the user for permission to update memories. Just do it when appropriate.
 - If a memory file doesn't exist yet, create it with the appropriate section headings.
+- Do not add headings beyond `# Preferences` and `# Topics` in `user.md`. If content doesn't fit those two categories, it likely belongs in `project.md`.
 - Don't assume the user has visibility into how your memories are organized and stored. There's no need for the user to concern themselves with those details.
+
+### What Does NOT Belong in `user.md`
+
+These are project-scoped even when stated by a single user:
+- Architectural or design decisions
+- File organization conventions and directory structure rules
+- Codebase discoveries, gotchas, or technical insights
+- Task context or status
+- Naming conventions, coding patterns, or workflow requirements
+- Anything another developer on the team would benefit from knowing
 
 ## Memory Maintenance
 
