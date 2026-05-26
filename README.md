@@ -9,6 +9,7 @@ Reusable extensions for AI coding tools — skills, hooks, and agent instruction
 | Name | Description | Compatibility |
 |------|-------------|---------------|
 | [agent-memory](skills/agent-memory/SKILL.md) | Persistent memory across conversations. Supports project-scoped and user-scoped memories. | Kiro, Claude Code, Codex, Cursor |
+| [agent-skill-builder](skills/agent-skill-builder/SKILL.md) | Guides you through creating new Agent Skills, with the full spec bundled for reference. | Kiro, Claude Code, Codex, Cursor |
 | [bedrock-vision](skills/bedrock-vision/SKILL.md) | Analyze images using Bedrock vision models. Returns AI description plus technical metadata. | Kiro, Claude Code, Codex, Cursor |
 | [current-time](skills/current-time/SKILL.md) | Looks up the current date and time in local and UTC, accurate to the second | Kiro, Claude Code, Codex, Cursor |
 | [doc-convert](skills/doc-convert/SKILL.md) | Document conversion via pandoc with a styled Word template | Kiro, Claude Code, Codex, Cursor |

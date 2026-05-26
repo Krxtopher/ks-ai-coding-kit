@@ -51,6 +51,17 @@ items:
       codex: .agents/skills/current-time
       cursor: .agents/skills/current-time
 
+  - name: agent-skill-builder
+    type: skill
+    source: skills/agent-skill-builder
+    description: Guides you through creating new Agent Skills from scratch, with the full specification bundled for reference
+    compatibility: [kiro, claude-code, codex, cursor]
+    targets:
+      kiro: .kiro/skills/agent-skill-builder
+      claude-code: .claude/skills/agent-skill-builder
+      codex: .agents/skills/agent-skill-builder
+      cursor: .agents/skills/agent-skill-builder
+
   - name: bedrock-vision
     type: skill
     source: skills/bedrock-vision
