@@ -19,6 +19,7 @@ Reusable extensions for AI coding tools — skills, hooks, and agent instruction
 | Name | Description | Compatibility |
 |------|-------------|---------------|
 | [shell-command-explainer](hooks/shell-command-explainer.kiro.hook) | Explains shell commands before execution with safety analysis | Kiro |
+| [kiro-voice-response](hooks/kiro-voice-response/) | Speaks agent responses and acknowledgments aloud using Amazon Polly (Gregory neural voice). Requires `ffplay` and `boto3`. | Kiro |
 
 ### Agent Instructions
 

@@ -53,6 +53,7 @@ ks-ai-coding-kit/
 | File | Event | Description |
 |------|-------|-------------|
 | `hooks/shell-command-explainer.kiro.hook` | `preToolUse` (shell) | Pre-execution shell command explanation and safety/trust analysis |
+| `hooks/kiro-voice-response/` | `agentStop`, `promptSubmit` | Speaks agent responses and acknowledgments aloud using Amazon Polly (Gregory neural voice). Requires `ffplay` (FFmpeg) and `boto3`. |
 
 ## Compatibility Notes
 

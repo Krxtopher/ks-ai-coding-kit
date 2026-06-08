@@ -1,0 +1,13 @@
+{
+  "name": "Kiro Voice Response",
+  "version": "1.0.0",
+  "description": "After each agent response, generates a concise conversational spoken summary and plays it aloud using Amazon Polly with the Gregory neural voice.",
+  "enabled": true,
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Rephrase your most recent response into a brief, conversational spoken summary — as if you're casually telling the user what you just did or said. This is NOT a verbatim reading; it's a natural, concise recap (1-3 sentences, under 300 characters). Match the tone of a friendly colleague giving a quick status update.\n\nRules:\n- Plain prose only — no markdown, code fences, bullet points, or special characters.\n- If your response was only tool calls with no meaningful prose output, skip voice playback entirely and say nothing.\n- If your response was a question to the user, rephrase it conversationally.\n\nOnce you have the spoken text, run the script:\n\npython3 /Users/schultkr/Git/GitHub/ks-ai-coding-kit/hooks/kiro-voice-response/speak.py \"<spoken text>\"\n\nDo this silently — do not add any written commentary or explanation."
+  }
+}

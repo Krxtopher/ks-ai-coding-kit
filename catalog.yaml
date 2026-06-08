@@ -81,6 +81,14 @@ items:
     targets:
       kiro: .kiro/hooks/shell-command-explainer.kiro.hook
 
+  - name: kiro-voice-response
+    type: hook
+    source: hooks/kiro-voice-response
+    description: Speaks agent responses and acknowledgments aloud using Amazon Polly (Gregory neural voice)
+    compatibility: [kiro]
+    targets:
+      kiro: .kiro/hooks/kiro-voice-response
+
   - name: documentation-standards
     type: instruction
     source: agent-instructions/documentation-standards.md

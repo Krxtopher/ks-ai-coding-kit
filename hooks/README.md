@@ -58,3 +58,4 @@ cp hooks/<hook>.json /path/to/your/project/.kiro/hooks/
 | File | Description | Event |
 |------|-------------|-------|
 | `shell-command-explainer.kiro.hook` | Explains what a shell command will do before execution and provides a safety/trust analysis for auto-approval decisions | `preToolUse` (shell) |
+| `kiro-voice-response/` | Speaks agent responses and acknowledgments aloud using Amazon Polly (Gregory neural voice). See [kiro-voice-response/README.md](kiro-voice-response/README.md) for details. | `agentStop`, `promptSubmit` |

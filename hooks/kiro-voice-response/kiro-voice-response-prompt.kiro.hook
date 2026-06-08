@@ -1,0 +1,13 @@
+{
+  "name": "Kiro Voice Response (Prompt Acknowledgment)",
+  "version": "2.0.0",
+  "description": "When the user sends a message, plays a random pre-generated acknowledgment phrase using the Gregory neural voice.",
+  "enabled": true,
+  "when": {
+    "type": "promptSubmit"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "python3 .kiro/hooks/kiro-voice-response/acknowledge.py"
+  }
+}
