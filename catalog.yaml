@@ -73,6 +73,28 @@ items:
       codex: .agents/skills/bedrock-vision
       cursor: .agents/skills/bedrock-vision
 
+  - name: tutorial-jupyter-notebook
+    type: skill
+    source: skills/tutorial-jupyter-notebook
+    description: Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts
+    compatibility: [kiro, claude-code, codex, cursor]
+    targets:
+      kiro: .kiro/skills/tutorial-jupyter-notebook
+      claude-code: .claude/skills/tutorial-jupyter-notebook
+      codex: .agents/skills/tutorial-jupyter-notebook
+      cursor: .agents/skills/tutorial-jupyter-notebook
+
+  - name: git-guardian
+    type: skill
+    source: skills/git-guardian
+    description: Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing
+    compatibility: [kiro, claude-code, codex, cursor]
+    targets:
+      kiro: .kiro/skills/git-guardian
+      claude-code: .claude/skills/git-guardian
+      codex: .agents/skills/git-guardian
+      cursor: .agents/skills/git-guardian
+
   - name: shell-command-explainer
     type: hook
     source: hooks/shell-command-explainer.kiro.hook
