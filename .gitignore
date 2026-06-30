@@ -26,5 +26,9 @@ __pycache__/
 .venv/
 *.egg-info/
 
+# Large model files (downloaded locally, not committed)
+*.onnx
+voices-*.bin
+
 # Node (if CLI is ever built in JS)
 node_modules/

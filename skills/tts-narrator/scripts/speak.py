@@ -1,179 +1,172 @@
 #!/usr/bin/env python3
 """
-Text-to-speech narrator using Amazon Bedrock (Nova Micro) + Amazon Polly.
+Text-to-speech narrator client — sends messages to the TTS daemon.
 
 Usage:
-    echo '{"trigger":"preToolUse","toolInput":{"command":"npm run build"}}' | python speak.py --context
     python speak.py --message "Hello world"
 
-In --context mode, reads JSON hook context from stdin, asks a fast LLM
-to generate a short spoken utterance, then synthesizes and plays it.
+If the daemon isn't running, this script auto-starts it in the background
+and waits for it to become ready before sending the message.
 """
 
 import argparse
-import fcntl
 import json
 import os
+import signal
+import socket
 import subprocess
 import sys
 import tempfile
-import warnings
+import time
 from pathlib import Path
-
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-
-import boto3
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 
-# LLM for utterance generation
-MODEL_ID = "us.amazon.nova-micro-v1:0"  # Swap to "us.amazon.nova-lite-v2:0" for higher quality
-
-# Polly voice
-VOICE_ID = "Ruth"
-ENGINE = "generative"
-OUTPUT_FORMAT = "mp3"
-
-# AWS region (used for both Bedrock and Polly)
-REGION = "us-east-1"
-
-# Playback lock file — serializes audio so utterances don't overlap
-LOCK_FILE = os.path.join(tempfile.gettempdir(), "kiro-tts-narrator.lock")
-
-# Voice personality prompt — loaded from file next to this script
 SCRIPT_DIR = Path(__file__).resolve().parent
-PERSONALITY_FILE = SCRIPT_DIR / "voice-personality.md"
+DAEMON_SCRIPT = SCRIPT_DIR / "tts_daemon.py"
+SOCKET_PATH = Path(tempfile.gettempdir()) / "kiro-tts-daemon.sock"
+PID_FILE = Path(tempfile.gettempdir()) / "kiro-tts-daemon.pid"
+
+# Default voice settings (overridable via CLI)
+DEFAULT_VOICE = "bm_daniel"
+DEFAULT_SPEED = 1.0
+
+# Daemon startup timeout
+DAEMON_START_TIMEOUT = 15.0  # seconds
 
 
-def load_personality() -> str:
-    """Load the voice personality prompt from the companion text file."""
+def daemon_is_running() -> bool:
+    """Check if the daemon process is alive."""
+    if not PID_FILE.exists():
+        return False
     try:
-        return PERSONALITY_FILE.read_text().strip()
-    except FileNotFoundError:
-        # Fallback if personality file is missing
-        return (
-            "You are a casual AI coding assistant named Kiro. "
-            "Given a JSON event, produce a short first-person spoken sentence (max 20 words). "
-            "Output ONLY the sentence, or SKIP if nothing noteworthy happened."
-        )
+        pid = int(PID_FILE.read_text().strip())
+        os.kill(pid, 0)  # Signal 0 = check if process exists
+        return True
+    except (ProcessLookupError, ValueError, PermissionError):
+        return False
 
 
-def generate_utterance(context: dict) -> str:
-    """Ask Bedrock Nova Micro to generate a short spoken message from hook context.
+def start_daemon() -> bool:
+    """Start the daemon in the background and wait for it to be ready.
 
-    Returns an empty string if the LLM decides there's nothing worth saying (SKIP).
+    Returns True if the daemon is ready, False on timeout.
     """
-    bedrock = boto3.client("bedrock-runtime", region_name=REGION)
+    # Clean stale socket
+    if SOCKET_PATH.exists() and not daemon_is_running():
+        SOCKET_PATH.unlink(missing_ok=True)
+        PID_FILE.unlink(missing_ok=True)
 
-    system_prompt = load_personality()
-    user_message = json.dumps(context, default=str)
-
-    response = bedrock.converse(
-        modelId=MODEL_ID,
-        system=[{"text": system_prompt}],
-        messages=[{"role": "user", "content": [{"text": user_message}]}],
-        inferenceConfig={
-            "maxTokens": 50,
-            "temperature": 0.7,
-        },
+    # Launch daemon
+    subprocess.Popen(
+        [sys.executable, str(DAEMON_SCRIPT), "--daemonize"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
 
-    output = response["output"]["message"]["content"][0]["text"]
-    output = output.strip().strip('"')
+    # Wait for socket to appear
+    deadline = time.time() + DAEMON_START_TIMEOUT
+    while time.time() < deadline:
+        if SOCKET_PATH.exists():
+            # Brief extra pause to ensure the daemon is accepting connections
+            time.sleep(0.1)
+            return True
+        time.sleep(0.1)
 
-    # LLM signals nothing noteworthy happened
-    if output.upper() == "SKIP":
-        return ""
-
-    return output
+    return False
 
 
-def synthesize_and_play(message: str) -> None:
-    """Call Polly to synthesize speech, then fork a background child to play it.
+def ensure_daemon() -> bool:
+    """Make sure the daemon is running. Start it if needed.
 
-    The parent process returns immediately (unblocking the hook), while the
-    child acquires an exclusive file lock and plays audio. If another child
-    is already playing, the new child waits its turn — serializing playback
-    without blocking the agent.
+    Returns True if daemon is ready, False otherwise.
     """
+    if SOCKET_PATH.exists() and daemon_is_running():
+        return True
+    return start_daemon()
+
+
+def send_to_daemon(message: str, voice: str, speed: float) -> dict:
+    """Send a synthesis request to the daemon and return the response."""
+    request = {"message": message, "voice": voice, "speed": speed}
+
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.settimeout(30.0)  # generous timeout for long utterances
+    try:
+        sock.connect(str(SOCKET_PATH))
+        sock.sendall((json.dumps(request) + "\n").encode("utf-8"))
+
+        # Read response
+        data = b""
+        while True:
+            chunk = sock.recv(4096)
+            if not chunk:
+                break
+            data += chunk
+            if b"\n" in data:
+                break
+
+        if data.strip():
+            return json.loads(data.decode("utf-8").strip())
+        return {"status": "ok"}
+    except (ConnectionRefusedError, FileNotFoundError):
+        return {"status": "error", "detail": "daemon not reachable"}
+    finally:
+        sock.close()
+
+
+def speak(message: str, voice: str, speed: float) -> None:
+    """Ensure daemon is running, then send the message for synthesis."""
     if not message.strip():
         return
 
-    polly = boto3.client("polly", region_name=REGION)
-
-    response = polly.synthesize_speech(
-        Text=message,
-        OutputFormat=OUTPUT_FORMAT,
-        VoiceId=VOICE_ID,
-        Engine=ENGINE,
-    )
-
-    with tempfile.NamedTemporaryFile(suffix=f".{OUTPUT_FORMAT}", delete=False) as tmp:
-        tmp.write(response["AudioStream"].read())
-        tmp_path = tmp.name
-
-    # Fork: parent returns immediately, child handles queued playback
-    pid = os.fork()
-    if pid != 0:
-        # Parent — return without waiting
+    if not ensure_daemon():
+        print("Error: Could not start TTS daemon", file=sys.stderr)
         return
 
-    # ─── Child process ───────────────────────────────────────────────────
-    # Detach from parent's process group so we don't get killed with it
-    os.setsid()
+    response = send_to_daemon(message, voice, speed)
 
-    # Acquire exclusive lock (blocks until previous playback finishes)
-    lock_fd = open(LOCK_FILE, "w")
-    fcntl.flock(lock_fd, fcntl.LOCK_EX)
-    try:
-        subprocess.run(
-            ["afplay", tmp_path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    finally:
-        fcntl.flock(lock_fd, fcntl.LOCK_UN)
-        lock_fd.close()
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
-
-    # Exit child cleanly without running atexit handlers
-    os._exit(0)
+    if response.get("status") == "error":
+        # If daemon crashed, try once more with a fresh start
+        if start_daemon():
+            send_to_daemon(message, voice, speed)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Polly TTS narrator for Kiro hooks")
-    parser.add_argument("--message", "-m", help="Speak this message directly (skip LLM)")
+    parser = argparse.ArgumentParser(description="TTS narrator (Kokoro client)")
+    parser.add_argument("--message", "-m", help="Speak this message directly")
     parser.add_argument(
-        "--context",
+        "--voice",
+        default=DEFAULT_VOICE,
+        help=f"Voice ID (default: {DEFAULT_VOICE})",
+    )
+    parser.add_argument(
+        "--speed",
+        type=float,
+        default=DEFAULT_SPEED,
+        help=f"Speech speed (default: {DEFAULT_SPEED})",
+    )
+    parser.add_argument(
+        "--stop-daemon",
         action="store_true",
-        help="Read JSON context from stdin, generate utterance via LLM, then speak",
+        help="Stop the running TTS daemon",
     )
     args = parser.parse_args()
 
+    if args.stop_daemon:
+        if daemon_is_running():
+            pid = int(PID_FILE.read_text().strip())
+            os.kill(pid, signal.SIGTERM)
+            print(f"Stopped TTS daemon (pid {pid})")
+        else:
+            print("No daemon running")
+        return
+
     if args.message:
-        synthesize_and_play(args.message)
-    elif args.context:
-        raw = sys.stdin.read()
-        try:
-            context = json.loads(raw)
-        except json.JSONDecodeError:
-            context = {}
-
-        # Skip self-referential invocations (e.g. pre-shell firing for speak.py itself)
-        tool_input = context.get("toolInput", {})
-        command = tool_input.get("command", "") if isinstance(tool_input, dict) else ""
-        if "speak.py" in command:
-            return
-
-        message = generate_utterance(context)
-        synthesize_and_play(message)
+        speak(args.message, args.voice, args.speed)
     else:
-        # Plain text from stdin — speak directly
         message = sys.stdin.read().strip()
-        synthesize_and_play(message)
+        speak(message, args.voice, args.speed)
 
 
 if __name__ == "__main__":
