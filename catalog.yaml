@@ -103,6 +103,22 @@ items:
     targets:
       kiro: .kiro/hooks/shell-command-explainer.kiro.hook
 
+  - name: tts-narrator
+    type: skill
+    source: skills/tts-narrator
+    description: Text-to-speech narrator for Kiro sessions using Amazon Bedrock and Polly
+    compatibility: [kiro]
+    targets:
+      kiro: .kiro/skills/tts-narrator
+
+  - name: tts-narrator-hooks
+    type: hook
+    source: hooks/tts-narrator
+    description: Kiro hooks that trigger spoken voice feedback via the tts-narrator skill
+    compatibility: [kiro]
+    targets:
+      kiro: .kiro/hooks
+
   - name: documentation-standards
     type: instruction
     source: agent-instructions/documentation-standards.md

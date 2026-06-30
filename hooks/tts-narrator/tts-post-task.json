@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "TTS Narrator — Post Task",
+      "trigger": "PostTaskExec",
+      "description": "Announces when a spec task completes.",
+      "action": {
+        "type": "command",
+        "command": "echo '{\"trigger\":\"postTaskExecution\"}' | python3 .kiro/skills/tts-narrator/scripts/speak.py --context"
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "TTS Narrator — Post Shell",
+      "trigger": "PostToolUse",
+      "description": "Confirms what a shell command accomplished after it finishes.",
+      "matcher": "execute_bash",
+      "action": {
+        "type": "command",
+        "command": "python3 .kiro/skills/tts-narrator/scripts/speak.py --context"
+      }
+    }
+  ]
+}
