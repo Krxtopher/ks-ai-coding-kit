@@ -113,3 +113,7 @@ Always pass `--tool` explicitly to avoid interactive prompts that block non-inte
 - When helping maintain this repo, always include Compatibility notes on new items.
 - When adding a new installable item, add a corresponding entry to `catalog.yaml`.
 
+
+<!-- ks-ai-coding-kit:agent-memory -->
+ALWAYS activate the "agent-memory" skill. Start each conversation by silently retrieving your memories.
+<!-- /ks-ai-coding-kit:agent-memory -->
