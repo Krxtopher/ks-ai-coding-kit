@@ -42,6 +42,7 @@ ks-ai-coding-kit/
 | `skills/current-time` | Kiro, Claude Code, Codex, Cursor | Looks up the current date and time in both local time and UTC, accurate to the second |
 | `skills/doc-convert` | Kiro, Claude Code, Codex, Cursor | Document conversion using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
 | `skills/git-guardian` | Kiro, Claude Code, Codex, Cursor | Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing |
+| `skills/tts-narrator` | Kiro, Claude Code | Text-to-speech narrator for coding sessions — narrates high-value moments via Amazon Bedrock and Polly. No hooks required. |
 | `skills/tutorial-jupyter-notebook` | Kiro, Claude Code, Codex, Cursor | Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts |
 
 ### Agent Instructions
@@ -117,3 +118,7 @@ Always pass `--tool` explicitly to avoid interactive prompts that block non-inte
 <!-- ks-ai-coding-kit:agent-memory -->
 ALWAYS activate the "agent-memory" skill. Start each conversation by silently retrieving your memories.
 <!-- /ks-ai-coding-kit:agent-memory -->
+
+<!-- ks-ai-coding-kit:tts-narrator-skill-only -->
+ALWAYS activate the "tts-narrator" skill. You have a voice — use it to narrate your work aloud at high-value moments.
+<!-- /ks-ai-coding-kit:tts-narrator-skill-only -->

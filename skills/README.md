@@ -30,9 +30,13 @@ Skills with Python script dependencies should include a `requirements.txt` in th
 | Directory | Description |
 |-----------|-------------|
 | `agent-memory/` | Persistent AI memory system with project-scoped and user-scoped memory files for retaining context across conversations |
+| `agent-skill-builder/` | Guides you through creating new Agent Skills from scratch, with the full specification bundled for reference |
+| `bedrock-vision/` | Analyze images from the workspace by extracting technical metadata and generating AI-powered descriptions via Amazon Bedrock |
 | `current-time/` | Looks up the current date and time, accurate to the second, in both local time and UTC |
 | `doc-convert/` | Convert documents between formats using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
-| `bedrock-vision/` | Analyze images from the workspace by extracting technical metadata and generating AI-powered descriptions via Amazon Bedrock |
+| `git-guardian/` | Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing |
+| `tts-narrator/` | Text-to-speech narrator for coding sessions — narrates high-value moments via Amazon Bedrock and Polly. No hooks required. |
+| `tutorial-jupyter-notebook/` | Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts |
 
 ## Usage Examples
 

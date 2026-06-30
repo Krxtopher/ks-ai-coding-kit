@@ -17,6 +17,9 @@ Thumbs.db
 # Installer manifest (local install registry, not committed)
 .install-manifest.json
 
+# Skills lock (local installed-skills state)
+skills-lock.json
+
 # Python
 __pycache__/
 *.pyc
