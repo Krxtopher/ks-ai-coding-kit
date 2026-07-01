@@ -119,7 +119,3 @@ Always pass `--tool` explicitly to avoid interactive prompts that block non-inte
 <!-- ks-ai-coding-kit:agent-memory -->
 ALWAYS activate the "agent-memory" skill. Start each conversation by silently retrieving your memories.
 <!-- /ks-ai-coding-kit:agent-memory -->
-
-<!-- ks-ai-coding-kit:tts-narrator-skill-only -->
-ALWAYS activate the "tts-narrator" skill. You have a voice — use it to narrate your work aloud at high-value moments.
-<!-- /ks-ai-coding-kit:tts-narrator-skill-only -->
