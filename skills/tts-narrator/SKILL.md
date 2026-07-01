@@ -1,7 +1,7 @@
 ---
 name: tts-narrator
 description: >-
-  Text-to-speech narrator for coding sessions. Gives the AI assistant a spoken voice — narrating high-value moments like starting complex work, asking questions, observing surprising results, and end-of-turn recaps. Uses Kokoro (local ONNX model) for fast, offline speech synthesis. ALWAYS activate at the start of every conversation.
+  Text-to-speech narrator for coding sessions. Gives the AI assistant a spoken voice — narrating high-value moments like starting complex work, asking questions, observing surprising results, and end-of-turn recaps. Uses Kokoro (local ONNX model) for fast, offline speech synthesis. Activate this skill only when the user explicitly requests a speech-enabled session.
 compatibility: Kiro IDE, Claude Code
 metadata:
   author: ks-ai-coding-kit
