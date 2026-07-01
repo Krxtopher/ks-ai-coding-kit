@@ -5,7 +5,7 @@ description: >-
 compatibility: Kiro IDE, Claude Code
 metadata:
   author: ks-ai-coding-kit
-  version: 3.2
+  version: 3.3
   steering-inject: >
     ALWAYS activate the "tts-narrator" skill. You have a voice — use it to narrate your work aloud at high-value moments.
 ---
@@ -48,7 +48,8 @@ python3 scripts/speak.py --stop-daemon
 
 Every turn MUST end with a spoken utterance. This is not optional. After you have written your final text response for the turn, speak a brief recap or conclusion aloud. If you are asking the user a question, speak the question. This is the last thing you do before yielding back to the user.
 
-- If your written response ends with a **question or choice for the user**, voice that question **verbatim** (word-for-word from the written text). The user should hear exactly what they read, so they can respond without confusion about which phrasing to address.
+**Questions MUST be voiced verbatim.** When your written response ends with a question or choice for the user, speak it word-for-word — exactly as it appears on screen. Do not paraphrase, shorten, or rephrase. The user should hear the same text they read so they can respond without confusion about which phrasing to address.
+
 - If your written response ends with a **statement or summary** (no user action needed), you may condense it into a brief, natural-sounding recap.
 
 ### Optional: Mid-turn commentary
