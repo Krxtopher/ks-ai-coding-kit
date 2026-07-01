@@ -42,6 +42,7 @@ ks-ai-coding-kit/
 | `skills/current-time` | Kiro, Claude Code, Codex, Cursor | Looks up the current date and time in both local time and UTC, accurate to the second |
 | `skills/doc-convert` | Kiro, Claude Code, Codex, Cursor | Document conversion using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
 | `skills/git-guardian` | Kiro, Claude Code, Codex, Cursor | Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing |
+| `skills/mermaid-diagram` | Kiro, Claude Code, Codex, Cursor | Generates static PNG images from Mermaid diagram definitions using the local Mermaid CLI |
 | `skills/tts-narrator` | Kiro, Claude Code | Text-to-speech narrator for coding sessions — narrates high-value moments via Amazon Bedrock and Polly. No hooks required. |
 | `skills/tutorial-jupyter-notebook` | Kiro, Claude Code, Codex, Cursor | Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts |
 

@@ -14,6 +14,7 @@ Reusable extensions for AI coding tools — skills, hooks, and agent instruction
 | [current-time](skills/current-time/SKILL.md) | Looks up the current date and time in local and UTC, accurate to the second | Kiro, Claude Code, Codex, Cursor |
 | [doc-convert](skills/doc-convert/SKILL.md) | Document conversion via pandoc with a styled Word template | Kiro, Claude Code, Codex, Cursor |
 | [git-guardian](skills/git-guardian/SKILL.md) | Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing | Kiro, Claude Code, Codex, Cursor |
+| [mermaid-diagram](skills/mermaid-diagram/SKILL.md) | Generates static PNG images from Mermaid diagram definitions using the local Mermaid CLI | Kiro, Claude Code, Codex, Cursor |
 | [tts-narrator](skills/tts-narrator/SKILL.md) | Text-to-speech narrator — narrates high-value moments via Amazon Bedrock and Polly. No hooks required. | Kiro, Claude Code |
 | [tutorial-jupyter-notebook](skills/tutorial-jupyter-notebook/SKILL.md) | Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts | Kiro, Claude Code, Codex, Cursor |
 

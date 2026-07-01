@@ -112,6 +112,17 @@ items:
       kiro: .kiro/skills/tts-narrator
       claude-code: .claude/skills/tts-narrator
 
+  - name: mermaid-diagram
+    type: skill
+    source: skills/mermaid-diagram
+    description: Generates static PNG images from Mermaid diagram definitions using the local Mermaid CLI
+    compatibility: [kiro, claude-code, codex, cursor]
+    targets:
+      kiro: .kiro/skills/mermaid-diagram
+      claude-code: .claude/skills/mermaid-diagram
+      codex: .agents/skills/mermaid-diagram
+      cursor: .agents/skills/mermaid-diagram
+
   - name: documentation-standards
     type: instruction
     source: agent-instructions/documentation-standards.md
