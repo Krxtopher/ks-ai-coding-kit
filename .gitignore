@@ -23,6 +23,9 @@ local-notes/
 # Skills lock (local installed-skills state)
 skills-lock.json
 
+# Runtime PID files (narrator skills)
+.narrator.pid
+
 # Python
 __pycache__/
 *.pyc
