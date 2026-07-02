@@ -15,8 +15,9 @@ Reusable extensions for AI coding tools — skills, hooks, and agent instruction
 | [doc-convert](skills/doc-convert/SKILL.md) | Document conversion via pandoc with a styled Word template | Kiro, Claude Code, Codex, Cursor |
 | [git-guardian](skills/git-guardian/SKILL.md) | Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing | Kiro, Claude Code, Codex, Cursor |
 | [mermaid-diagram](skills/mermaid-diagram/SKILL.md) | Generates static PNG images from Mermaid diagram definitions using the local Mermaid CLI | Kiro, Claude Code, Codex, Cursor |
-| [tts-narrator](skills/tts-narrator/SKILL.md) | Text-to-speech narrator — narrates high-value moments via Amazon Bedrock and Polly. No hooks required. | Kiro, Claude Code |
+| [narrator-kokoro](skills/narrator-kokoro/SKILL.md) | Text-to-speech narrator using Kokoro (local ONNX model) — fast, fully offline speech synthesis with zero API keys or cloud dependencies | Kiro, Claude Code, Codex, Cursor |
 | [narrator-elevenlabs](skills/narrator-elevenlabs/SKILL.md) | Text-to-speech narrator using ElevenLabs streaming API — high-quality cloud voices with low-latency playback | Kiro, Claude Code, Codex, Cursor |
+| [narrator-polly](skills/narrator-polly/SKILL.md) | Text-to-speech narrator using Amazon Polly generative engine — zero API key setup, uses AWS credentials, low-latency streaming | Kiro, Claude Code, Codex, Cursor |
 | [tutorial-jupyter-notebook](skills/tutorial-jupyter-notebook/SKILL.md) | Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts | Kiro, Claude Code, Codex, Cursor |
 
 ### Hooks

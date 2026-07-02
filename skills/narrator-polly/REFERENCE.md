@@ -1,0 +1,145 @@
+# Narrator Polly — Reference
+
+Detailed setup, configuration, and customization guide. The agent does not need this information during normal operation — consult it only when the user asks about setup, voices, cost, or advanced CLI options.
+
+## Prerequisites
+
+1. AWS credentials configured (via `~/.aws/config`, environment variables, or IAM role)
+2. IAM permissions for `polly:SynthesizeSpeech` (the `AmazonPollyReadOnlyAccess` managed policy works)
+3. An audio player installed: **mpv** (recommended) or **ffplay**
+4. Python dependencies: `pip install -r <skill-path>/requirements.txt`
+
+## No API Key Required
+
+Unlike third-party TTS services, Amazon Polly uses your existing AWS credentials. If you can run `aws sts get-caller-identity` successfully, you're ready to go. No separate API key signup or environment variable is needed.
+
+## CLI Options
+
+```bash
+# Speak a message (non-blocking)
+python3 scripts/speak.py --background --message "Hello world"
+
+# Use a specific voice
+python3 scripts/speak.py -b --message "Hello" --voice "Ruth"
+
+# Adjust speed
+python3 scripts/speak.py -b --message "Hello" --speed fast
+
+# Use a different AWS region
+python3 scripts/speak.py -b --message "Hello" --region us-west-2
+
+# Wait for playback to finish (blocking mode)
+python3 scripts/speak.py --message "Hello world"
+
+# Pipe text via stdin
+echo "Hello world" | python3 scripts/speak.py -b
+
+# Save current settings to config.json
+python3 scripts/speak.py -b --message "Hello" --voice "Stephen" --speed fast --save
+
+# Show saved configuration
+python3 scripts/speak.py --show-config
+```
+
+## Configuration
+
+The script reads `config.json` from the skill root directory. Users create/update it with the `--save` flag. Fields:
+
+```json
+{
+  "voice_id": "Matthew",
+  "speed": "medium",
+  "region": "us-east-1"
+}
+```
+
+Resolution order for each setting: CLI flag > config.json > environment variable (region only) > built-in default.
+
+## Available Generative Voices (English)
+
+These are the voices available with Polly's generative engine for English:
+
+| Voice ID | Language | Gender | Style |
+|----------|----------|--------|-------|
+| Matthew | en-US | Male | Warm, conversational (default) |
+| Stephen | en-US | Male | Clear, professional |
+| Ruth | en-US | Female | Calm, composed |
+| Danielle | en-US | Female | Natural, friendly |
+| Joanna | en-US | Female | Clear, versatile |
+| Salli | en-US | Female | Warm, expressive |
+| Tiffany | en-US | Female | Bright, youthful |
+| Amy | en-GB | Female | British, clear |
+| Brian | en-GB | Male | British, authoritative |
+| Olivia | en-AU | Female | Australian, warm |
+| Kajal | en-IN | Female | Indian English, clear |
+| Niamh | en-IE | Female | Irish, melodic |
+| Aria | en-NZ | Female | New Zealand, natural |
+
+For a full list of all generative voices across all languages, see: https://docs.aws.amazon.com/polly/latest/dg/generative-voices.html
+
+## Speed Options
+
+The `--speed` flag maps to SSML prosody rates:
+
+| Value | Effect |
+|-------|--------|
+| `x-slow` | Very slow, deliberate |
+| `slow` | Slightly slower than natural |
+| `medium` | Natural pace (default) |
+| `fast` | Slightly faster than natural |
+| `x-fast` | Very fast, energetic |
+
+## SSML Tags (Generative Engine)
+
+The following SSML tags are supported with generative voices:
+
+| Tag | Availability | Notes |
+|-----|-------------|-------|
+| `<break>` | Full | Pause control (e.g., `<break time="500ms"/>`) |
+| `<lang>` | Full | Specify language for foreign words |
+| `<p>` / `<s>` | Full | Paragraph and sentence boundaries |
+| `<prosody>` | Partial | Rate and volume (pitch control limited) |
+| `<say-as>` | Full | Control interpretation (characters, date, etc.) |
+| `<sub>` | Full | Pronunciation substitution |
+| `<w>` | Full | Part-of-speech hints |
+
+**Not supported with generative engine:** `<emphasis>`, `<amazon:auto-breaths>`, `<amazon:effect>` (whisper, DRC, vocal-tract-length), `<amazon:domain>`.
+
+## Cost
+
+Amazon Polly generative engine pricing: **$30 per 1 million characters**.
+
+For narrator usage with short utterances (50–200 characters each):
+- 100 utterances/day at ~100 chars each = 10,000 chars/day = **$0.30/day**
+- A typical coding session (20–40 utterances) costs roughly **$0.06–$0.12**
+- Monthly cost for daily use: approximately **$6–$9**
+
+There is no free tier for generative voices. Standard voices ($4/M chars) and neural voices ($16/M chars) are available at lower cost but with less natural delivery.
+
+## Supported Regions
+
+Polly's generative engine is available in select regions. The default is `us-west-2`.
+
+- `us-west-2` (Oregon) — recommended, default
+- `us-east-1` (N. Virginia)
+- `eu-west-1` (Ireland)
+- `eu-central-1` (Frankfurt)
+- `ap-northeast-1` (Tokyo)
+- `ap-southeast-1` (Singapore)
+- `ap-northeast-2` (Seoul)
+- `ca-central-1` (Canada)
+- `eu-west-2` (London)
+- `eu-central-2` (Zurich)
+
+> [!NOTE]
+> If you get empty audio or `IncompleteRead` errors in a particular region, try switching to a different one. Region availability for generative voices can vary.
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| "No audio player found" | Install mpv (`brew install mpv`) or ffplay (part of ffmpeg) |
+| "AccessDeniedException" | Ensure your IAM role/user has `polly:SynthesizeSpeech` permission |
+| "InvalidEngine" | Verify the voice supports generative engine, or try a different region |
+| Audio plays but sounds robotic | Confirm `Engine=generative` is being used (not standard or neural) |
+| Playback has high latency | Try a closer AWS region, or switch to mpv if using ffplay |

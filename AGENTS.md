@@ -43,8 +43,9 @@ ks-ai-coding-kit/
 | `skills/doc-convert` | Kiro, Claude Code, Codex, Cursor | Document conversion using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
 | `skills/git-guardian` | Kiro, Claude Code, Codex, Cursor | Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing |
 | `skills/mermaid-diagram` | Kiro, Claude Code, Codex, Cursor | Generates static PNG images from Mermaid diagram definitions using the local Mermaid CLI |
-| `skills/tts-narrator` | Kiro, Claude Code | Text-to-speech narrator for coding sessions — narrates high-value moments via Amazon Bedrock and Polly. No hooks required. |
+| `skills/narrator-kokoro` | Kiro, Claude Code, Codex, Cursor | Text-to-speech narrator using Kokoro (local ONNX model) — fast, fully offline speech synthesis with zero API keys or cloud dependencies |
 | `skills/narrator-elevenlabs` | Kiro, Claude Code, Codex, Cursor | Text-to-speech narrator using ElevenLabs streaming API — high-quality cloud voices with low-latency playback |
+| `skills/narrator-polly` | Kiro, Claude Code, Codex, Cursor | Text-to-speech narrator using Amazon Polly generative engine — zero API key setup, uses AWS credentials, low-latency streaming playback |
 | `skills/tutorial-jupyter-notebook` | Kiro, Claude Code, Codex, Cursor | Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts |
 
 ### Agent Instructions

@@ -35,7 +35,10 @@ Skills with Python script dependencies should include a `requirements.txt` in th
 | `current-time/` | Looks up the current date and time, accurate to the second, in both local time and UTC |
 | `doc-convert/` | Convert documents between formats using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
 | `git-guardian/` | Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing |
-| `tts-narrator/` | Text-to-speech narrator for coding sessions — narrates high-value moments via Amazon Bedrock and Polly. No hooks required. |
+| `mermaid-diagram/` | Generates static PNG images from Mermaid diagram definitions using the local Mermaid CLI |
+| `narrator-kokoro/` | Text-to-speech narrator using Kokoro (local ONNX model) — fast, fully offline speech synthesis with zero API keys or cloud dependencies |
+| `narrator-elevenlabs/` | Text-to-speech narrator using ElevenLabs streaming API — high-quality cloud voices with low-latency playback |
+| `narrator-polly/` | Text-to-speech narrator using Amazon Polly generative engine — zero API key setup, uses AWS credentials, low-latency streaming playback |
 | `tutorial-jupyter-notebook/` | Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts |
 
 ## Usage Examples

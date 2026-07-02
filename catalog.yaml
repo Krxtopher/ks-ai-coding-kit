@@ -103,14 +103,16 @@ items:
     targets:
       kiro: .kiro/hooks/shell-command-explainer.kiro.hook
 
-  - name: tts-narrator
+  - name: narrator-kokoro
     type: skill
-    source: skills/tts-narrator
-    description: Text-to-speech narrator for coding sessions — narrates high-value moments via Amazon Bedrock and Polly. No hooks required.
-    compatibility: [kiro, claude-code]
+    source: skills/narrator-kokoro
+    description: Text-to-speech narrator using Kokoro (local ONNX model) — fast, fully offline speech synthesis with zero API keys or cloud dependencies
+    compatibility: [kiro, claude-code, codex, cursor]
     targets:
-      kiro: .kiro/skills/tts-narrator
-      claude-code: .claude/skills/tts-narrator
+      kiro: .kiro/skills/narrator-kokoro
+      claude-code: .claude/skills/narrator-kokoro
+      codex: .agents/skills/narrator-kokoro
+      cursor: .agents/skills/narrator-kokoro
 
   - name: narrator-elevenlabs
     type: skill
@@ -122,6 +124,17 @@ items:
       claude-code: .claude/skills/narrator-elevenlabs
       codex: .agents/skills/narrator-elevenlabs
       cursor: .agents/skills/narrator-elevenlabs
+
+  - name: narrator-polly
+    type: skill
+    source: skills/narrator-polly
+    description: Text-to-speech narrator using Amazon Polly generative engine — zero API key setup, uses AWS credentials, low-latency streaming playback
+    compatibility: [kiro, claude-code, codex, cursor]
+    targets:
+      kiro: .kiro/skills/narrator-polly
+      claude-code: .claude/skills/narrator-polly
+      codex: .agents/skills/narrator-polly
+      cursor: .agents/skills/narrator-polly
 
   - name: mermaid-diagram
     type: skill
