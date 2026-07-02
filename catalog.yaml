@@ -112,6 +112,17 @@ items:
       kiro: .kiro/skills/tts-narrator
       claude-code: .claude/skills/tts-narrator
 
+  - name: narrator-elevenlabs
+    type: skill
+    source: skills/narrator-elevenlabs
+    description: Text-to-speech narrator using ElevenLabs streaming API — high-quality cloud voices with low-latency playback
+    compatibility: [kiro, claude-code, codex, cursor]
+    targets:
+      kiro: .kiro/skills/narrator-elevenlabs
+      claude-code: .claude/skills/narrator-elevenlabs
+      codex: .agents/skills/narrator-elevenlabs
+      cursor: .agents/skills/narrator-elevenlabs
+
   - name: mermaid-diagram
     type: skill
     source: skills/mermaid-diagram
