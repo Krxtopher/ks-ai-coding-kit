@@ -2,26 +2,32 @@
 """
 Text-to-speech narrator using ElevenLabs streaming API.
 
-Streams audio from ElevenLabs and plays it back immediately via mpv or ffplay.
+Streams audio from ElevenLabs and plays it back immediately via ffplay or mpv.
 Designed for low-latency narration during coding sessions.
+
+Supports multiple ElevenLabs models (v3, multilingual_v2, flash_v2_5, etc.)
+and gracefully handles feature differences between engines — including audio
+tag stripping for models that don't support them and parameter filtering.
 
 Usage:
     python speak.py --message "Hello world"
     python speak.py --message "Hello" --voice "JBFqnCBsd6RMkjVDRZzb"
     python speak.py --message "Hello" --speed 1.2
+    python speak.py --message "Hello" --model eleven_multilingual_v2
     python speak.py --message "Hello" --voice "abc123" --speed 1.1 --save
     echo "Hello world" | python speak.py
 
 Environment:
     ELEVENLABS_API_KEY  — required. Your ElevenLabs API key.
     ELEVENLABS_VOICE_ID — optional. Default voice ID (overridden by config/--voice).
-    ELEVENLABS_MODEL_ID — optional. Model to use (default: eleven_multilingual_v2).
+    ELEVENLABS_MODEL_ID — optional. Default model ID (overridden by config/--model).
 """
 
 import argparse
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -32,18 +38,14 @@ import httpx
 # ─── Configuration ───────────────────────────────────────────────────────────
 
 API_BASE = "https://api.elevenlabs.io/v1"
+DEFAULT_MODEL_ID = "eleven_v3"
 
 # Default voice: "George" — warm, conversational male voice
 DEFAULT_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"
-DEFAULT_MODEL_ID = "eleven_multilingual_v2"
 DEFAULT_SPEED = 1.0
 DEFAULT_STABILITY = 0.5
 DEFAULT_SIMILARITY = 0.75
 DEFAULT_STYLE = 0.0
-
-# Streaming latency optimization level (0-4).
-# 2 = strong optimizations (~75% of max improvement, good quality tradeoff)
-DEFAULT_LATENCY_OPT = 2
 
 # Output format: mp3 at 44.1kHz/64kbps — good balance of quality and stream speed
 OUTPUT_FORMAT = "mp3_44100_64"
@@ -53,6 +55,70 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 CONFIG_FILE = SCRIPT_DIR.parent / "config.json"
 
 logger = logging.getLogger(__name__)
+
+
+# ─── Engine capability map ───────────────────────────────────────────────────
+
+# Defines per-model feature support and constraints. Models not listed here
+# fall back to conservative defaults (no audio tags, style included, 5000 char limit).
+
+ENGINE_CAPS: dict[str, dict] = {
+    "eleven_v3": {
+        "audio_tags": True,
+        "style_param": False,       # v3 uses audio tags for expressiveness, not style
+        "use_speaker_boost": False,  # not documented for v3
+        "char_limit": 5000,
+    },
+    "eleven_multilingual_v2": {
+        "audio_tags": False,
+        "style_param": True,
+        "use_speaker_boost": True,
+        "char_limit": 10000,
+    },
+    "eleven_flash_v2_5": {
+        "audio_tags": False,
+        "style_param": True,
+        "use_speaker_boost": True,
+        "char_limit": 40000,
+    },
+    "eleven_flash_v2": {
+        "audio_tags": False,
+        "style_param": True,
+        "use_speaker_boost": True,
+        "char_limit": 30000,
+    },
+}
+
+# Conservative fallback for unknown models
+_DEFAULT_CAPS: dict = {
+    "audio_tags": False,
+    "style_param": True,
+    "use_speaker_boost": True,
+    "char_limit": 5000,
+}
+
+
+def get_engine_caps(model_id: str) -> dict:
+    """Return capability dict for a given model, falling back to safe defaults."""
+    return ENGINE_CAPS.get(model_id, _DEFAULT_CAPS)
+
+
+# ─── Audio tag handling ──────────────────────────────────────────────────────
+
+# Pattern matches ElevenLabs v3 audio tags like [whispers], [laughs], [sighs], etc.
+_AUDIO_TAG_PATTERN = re.compile(r"\[(?:whispers|sighs|laughs|excited|sarcastic|curious|giggles|exhales)\]", re.IGNORECASE)
+
+
+def strip_audio_tags(text: str) -> str:
+    """Remove audio tags from text for engines that don't support them.
+
+    Cleans up any leftover double-spaces or leading/trailing whitespace
+    that result from tag removal.
+    """
+    cleaned = _AUDIO_TAG_PATTERN.sub("", text)
+    # Collapse multiple spaces into one
+    cleaned = re.sub(r"  +", " ", cleaned)
+    return cleaned.strip()
 
 
 # ─── Config persistence ──────────────────────────────────────────────────────
@@ -149,14 +215,12 @@ def stream_speech(
     stability: float,
     similarity_boost: float,
     style: float,
-    latency_opt: int,
-    background: bool = False,
 ) -> None:
     """Stream TTS audio from ElevenLabs and pipe directly to audio player.
 
-    If background=True, the script exits as soon as all audio data has been
-    piped to the player process — playback continues in the background without
-    blocking the caller.
+    Automatically adapts the request payload based on the selected model's
+    capabilities — stripping audio tags, omitting unsupported voice_settings
+    parameters, and truncating text to the model's character limit.
     """
     player_cmd = find_player()
     if player_cmd is None:
@@ -169,24 +233,43 @@ def stream_speech(
         )
         return
 
-    url = f"{API_BASE}/text-to-speech/{voice_id}/stream"
-    params = {
-        "output_format": OUTPUT_FORMAT,
-        "optimize_streaming_latency": str(latency_opt),
+    caps = get_engine_caps(model_id)
+
+    # Strip audio tags if the model doesn't support them
+    if not caps["audio_tags"]:
+        message = strip_audio_tags(message)
+
+    # Truncate to model's character limit (shouldn't happen for narrator
+    # utterances which are short, but guard against it)
+    char_limit = caps["char_limit"]
+    if len(message) > char_limit:
+        logger.warning(
+            "Message truncated from %d to %d chars for model %s",
+            len(message), char_limit, model_id,
+        )
+        message = message[:char_limit]
+
+    # Build voice_settings based on model capabilities
+    voice_settings: dict = {
+        "stability": stability,
+        "similarity_boost": similarity_boost,
+        "speed": speed,
     }
+    if caps["style_param"]:
+        voice_settings["style"] = style
+    if caps["use_speaker_boost"]:
+        voice_settings["use_speaker_boost"] = True
+
+    url = f"{API_BASE}/text-to-speech/{voice_id}/stream"
+    params = {"output_format": OUTPUT_FORMAT}
     headers = {
         "xi-api-key": api_key,
         "Content-Type": "application/json",
     }
-    body = {
+    body: dict = {
         "text": message,
         "model_id": model_id,
-        "voice_settings": {
-            "stability": stability,
-            "similarity_boost": similarity_boost,
-            "style": style,
-            "speed": speed,
-        },
+        "voice_settings": voice_settings,
     }
 
     # Start the audio player process, ready to receive piped audio
@@ -232,8 +315,7 @@ def stream_speech(
     finally:
         if player_proc.stdin and not player_proc.stdin.closed:
             player_proc.stdin.close()
-        if not background:
-            player_proc.wait()
+        player_proc.wait()
 
 
 # ─── CLI ─────────────────────────────────────────────────────────────────────
@@ -252,7 +334,10 @@ def main() -> None:
     parser.add_argument(
         "--model",
         default=None,
-        help=f"ElevenLabs model ID (default: {DEFAULT_MODEL_ID})",
+        help=(
+            "ElevenLabs model ID (default: config > env > eleven_v3). "
+            "Examples: eleven_v3, eleven_multilingual_v2, eleven_flash_v2_5"
+        ),
     )
     parser.add_argument(
         "--speed",
@@ -276,14 +361,7 @@ def main() -> None:
         "--style",
         type=float,
         default=None,
-        help="Style exaggeration 0.0-1.0. Higher amplifies speaker style but adds latency (default: 0.0)",
-    )
-    parser.add_argument(
-        "--latency",
-        type=int,
-        default=None,
-        choices=[0, 1, 2, 3, 4],
-        help=f"Streaming latency optimization 0-4 (default: {DEFAULT_LATENCY_OPT})",
+        help="Style exaggeration 0.0-1.0. Higher amplifies speaker style but adds latency. Only used by v2 models (default: 0.0)",
     )
     parser.add_argument(
         "--background", "-b",
@@ -293,7 +371,7 @@ def main() -> None:
     parser.add_argument(
         "--save",
         action="store_true",
-        help="Save current settings (voice, speed, stability, similarity, style, latency) to config.json",
+        help="Save current settings (voice, model, speed, stability, similarity, style) to config.json",
     )
     parser.add_argument(
         "--show-config",
@@ -331,7 +409,6 @@ def main() -> None:
     stability = args.stability if args.stability is not None else config.get("stability", DEFAULT_STABILITY)
     similarity = args.similarity if args.similarity is not None else config.get("similarity_boost", DEFAULT_SIMILARITY)
     style = args.style if args.style is not None else config.get("style", DEFAULT_STYLE)
-    latency = args.latency if args.latency is not None else config.get("latency", DEFAULT_LATENCY_OPT)
 
     # ── Save config if requested ─────────────────────────────────────────
     if args.save:
@@ -342,7 +419,6 @@ def main() -> None:
             "stability": stability,
             "similarity_boost": similarity,
             "style": style,
-            "latency": latency,
         }
         save_config(new_config)
         print(f"Saved config to {CONFIG_FILE}")
@@ -396,8 +472,6 @@ def main() -> None:
             stability=stability,
             similarity_boost=similarity,
             style=style,
-            latency_opt=latency,
-            background=False,  # child waits for player so audio completes
         )
         os._exit(0)
     else:
@@ -411,8 +485,6 @@ def main() -> None:
             stability=stability,
             similarity_boost=similarity,
             style=style,
-            latency_opt=latency,
-            background=False,
         )
 
 

@@ -8,7 +8,7 @@ description: >-
 compatibility: Kiro IDE, Claude Code, Codex, Cursor
 metadata:
   author: ks-ai-coding-kit
-  version: 1.1
+  version: 1.2
   steering-inject: >
     ALWAYS activate the "narrator-elevenlabs" skill. You have a voice — use it to narrate your work aloud at high-value moments.
 ---
@@ -36,6 +36,10 @@ Always use `--background` (`-b`). This prevents playback from blocking the chat.
 
 ## When to Speak
 
+### Required: On activation
+
+Immediately after this skill is activated, speak a brief, casual acknowledgement that you're now able to speak. Something friendly and natural — like greeting someone at the start of a pairing session. One sentence, no fanfare. Do not mention the narrator skill.
+
 ### Required: End-of-turn narration
 
 Every turn MUST end with a spoken utterance. Speak a brief recap, conclusion, or question aloud as the last thing before yielding back to the user.
@@ -59,9 +63,40 @@ Speak when something noteworthy happens mid-turn:
 
 Don't narrate routine file reads.
 
+## Utterance Rules
+
+These rules apply regardless of personality:
+
+- **Brief.** Keep utterances short — one to three sentences max. This controls credit cost and avoids blocking.
+- **Never mention internal mechanics.** Don't say "running speak.py," reference the narrator system, audio tags, or the skill itself. Just speak naturally about the work.
+
+## Audio Tags
+
+You can use inline audio tags to add human expressiveness to your delivery. These are powered by ElevenLabs v3 and work with any personality.
+
+**Available tags:** `[whispers]`, `[sighs]`, `[laughs]`, `[excited]`, `[sarcastic]`, `[curious]`, `[giggles]`, `[exhales]`
+
+**When to use them:**
+- A test passes unexpectedly — `[laughs]` or `[excited]`
+- Something tedious or frustrating — `[sighs]`
+- Delivering a dry observation — `[sarcastic]`
+- Sharing something quietly notable — `[whispers]`
+- Genuinely curious about a result — `[curious]`
+
+**When NOT to use them:**
+- Routine narration (starting a build, reading a file, reporting a simple result)
+- Every utterance — overuse kills the effect
+- When it would feel forced or performative
+
+**Placement:** Tags go at the start of the phrase they affect, or inline before a specific clause:
+- `[sighs] Another merge conflict.`
+- `Well that was unexpected. [laughs] First try.`
+
+**Frequency:** Aim for audio tags in roughly 1 out of every 4–5 utterances, at most. Let the natural voice carry most of the work.
+
 ## Voice Style
 
-Your narration personality is defined in `<skill-path>/personality.md`. Read that file to understand how you should sound when speaking.
+Your narration personality is defined in `<skill-path>/personality.md`. Read that file to understand who you sound like when speaking.
 
 To customize, edit `personality.md` — or reset it by copying `default-personality.md` over it.
 
