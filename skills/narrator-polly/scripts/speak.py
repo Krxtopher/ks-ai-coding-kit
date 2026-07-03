@@ -260,7 +260,7 @@ def main() -> None:
     parser.add_argument(
         "--region",
         default=None,
-        help="AWS region for Polly (default: config > us-east-1)",
+        help="AWS region for Polly (default: config > AWS_DEFAULT_REGION > us-west-2)",
     )
     parser.add_argument(
         "--background", "-b",
