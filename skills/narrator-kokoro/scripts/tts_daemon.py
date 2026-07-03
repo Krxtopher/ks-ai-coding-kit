@@ -40,9 +40,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 MODEL_PATH = SCRIPT_DIR / "kokoro-v1.0.onnx"
 VOICES_PATH = SCRIPT_DIR / "voices-v1.0.bin"
 
-SOCKET_PATH = Path(tempfile.gettempdir()) / "kiro-tts-daemon.sock"
-PID_FILE = Path(tempfile.gettempdir()) / "kiro-tts-daemon.pid"
-LOCK_FILE = Path(tempfile.gettempdir()) / "kiro-tts-narrator.lock"
+_UID = os.getuid()
+SOCKET_PATH = Path(tempfile.gettempdir()) / f"kiro-tts-daemon-{_UID}.sock"
+PID_FILE = Path(tempfile.gettempdir()) / f"kiro-tts-daemon-{_UID}.pid"
+LOCK_FILE = Path(tempfile.gettempdir()) / f"kiro-tts-narrator-{_UID}.lock"
 
 IDLE_TIMEOUT_SECONDS = 600  # 10 minutes
 DEFAULT_VOICE = "af_sarah"

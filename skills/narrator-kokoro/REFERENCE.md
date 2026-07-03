@@ -77,9 +77,9 @@ The daemon stores its state in the system temp directory:
 
 | File | Purpose |
 |------|---------|
-| `/tmp/kiro-tts-daemon.sock` | Unix socket for client-daemon communication |
-| `/tmp/kiro-tts-daemon.pid` | PID file for process tracking |
-| `/tmp/kiro-tts-narrator.lock` | Playback serialization lock |
+| `/tmp/kiro-tts-daemon-<UID>.sock` | Unix socket for client-daemon communication |
+| `/tmp/kiro-tts-daemon-<UID>.pid` | PID file for process tracking |
+| `/tmp/kiro-tts-narrator-<UID>.lock` | Playback serialization lock |
 
 To manually stop the daemon:
 ```bash

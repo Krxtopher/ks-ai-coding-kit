@@ -24,8 +24,9 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DAEMON_SCRIPT = SCRIPT_DIR / "tts_daemon.py"
-SOCKET_PATH = Path(tempfile.gettempdir()) / "kiro-tts-daemon.sock"
-PID_FILE = Path(tempfile.gettempdir()) / "kiro-tts-daemon.pid"
+_UID = os.getuid()
+SOCKET_PATH = Path(tempfile.gettempdir()) / f"kiro-tts-daemon-{_UID}.sock"
+PID_FILE = Path(tempfile.gettempdir()) / f"kiro-tts-daemon-{_UID}.pid"
 
 # Default voice settings (overridable via CLI)
 DEFAULT_VOICE = "bm_daniel"
