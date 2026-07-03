@@ -38,7 +38,7 @@ Always use `--background` (`-b`). This prevents playback from blocking the chat.
 
 ### Required: On activation
 
-Immediately after this skill is activated, speak a brief, casual acknowledgement that you're now able to speak. Something friendly and natural — like greeting someone at the start of a pairing session. One sentence, no fanfare. Do not mention the narrator skill.
+Immediately after this skill is activated, speak a brief, casual acknowledgement that you're now able to speak. Something friendly and natural — like greeting someone at the start of a pairing session. One sentence, no fanfare. Do not mention the narrator skill in either your speech or in the text output.
 
 ### Required: End-of-turn narration
 
