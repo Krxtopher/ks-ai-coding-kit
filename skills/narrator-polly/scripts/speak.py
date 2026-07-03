@@ -40,7 +40,7 @@ DEFAULT_VOICE_ID = "Matthew"
 DEFAULT_SPEED = "medium"  # prosody rate: x-slow, slow, medium, fast, x-fast
 DEFAULT_REGION = "us-west-2"
 
-# Output format: OGG Opus at 24kHz — low latency, high quality, small payload
+# Output format: OGG Vorbis at 24kHz — low latency, high quality, small payload
 OUTPUT_FORMAT = "ogg_vorbis"
 SAMPLE_RATE = "24000"
 
