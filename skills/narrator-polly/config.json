@@ -1,5 +1,7 @@
 {
-  "voice_id": "Matthew",
+  "voice_id": "vc-56f8fbd479",
   "speed": "medium",
-  "region": "us-west-2"
+  "region": "us-east-1",
+  "endpoint_url": "https://gamma.us-east-1.parrot.a2z.com/",
+  "profile": "polly-shared"
 }

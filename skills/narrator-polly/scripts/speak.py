@@ -13,9 +13,8 @@ Usage:
     python speak.py --message "Hello" --voice "Ruth" --save
     echo "Hello world" | python speak.py
 
-Environment:
-    AWS_PROFILE — optional. AWS profile for credentials (default profile used otherwise).
-    AWS_REGION  — optional. Override the default region for Polly calls.
+Configuration is managed entirely via config.json in the skill root directory.
+CLI flags override config.json values when provided.
 """
 
 import argparse
@@ -35,8 +34,8 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 ENGINE = "generative"
 
-# Default voice: "Matthew" — warm, conversational US male generative voice
-DEFAULT_VOICE_ID = "Matthew"
+# Default voice: "Ruth" — warm, natural US female generative voice
+DEFAULT_VOICE_ID = "Ruth"
 DEFAULT_SPEED = "medium"  # prosody rate: x-slow, slow, medium, fast, x-fast
 DEFAULT_REGION = "us-west-2"
 
@@ -88,8 +87,8 @@ def find_player() -> list[str] | None:
             "mpv",
             "--no-terminal",
             "--no-video",
-            "--demuxer-max-bytes=128KiB",
-            "--demuxer-readahead-secs=0.5",
+            "--demuxer-max-bytes=512KiB",
+            "--audio-buffer=1",
             "-",
         ]
     if shutil.which("ffplay"):
@@ -166,6 +165,8 @@ def stream_speech(
     voice_id: str,
     speed: str,
     region: str,
+    endpoint_url: str | None = None,
+    profile: str | None = None,
 ) -> None:
     """Stream TTS audio from Amazon Polly and pipe directly to audio player."""
     player_cmd = find_player()
@@ -187,7 +188,11 @@ def stream_speech(
         region_name=region,
         retries={"max_attempts": 2, "mode": "adaptive"},
     )
-    polly = boto3.client("polly", config=boto_config)
+    session = boto3.Session(profile_name=profile) if profile else boto3.Session()
+    client_kwargs: dict = {"config": boto_config}
+    if endpoint_url:
+        client_kwargs["endpoint_url"] = endpoint_url
+    polly = session.client("polly", **client_kwargs)
 
     try:
         response = polly.synthesize_speech(
@@ -249,7 +254,7 @@ def main() -> None:
     parser.add_argument(
         "--voice",
         default=None,
-        help="Polly voice ID, e.g. Matthew, Ruth, Stephen (default: config > Matthew)",
+        help="Polly voice ID, e.g. Ruth, Matthew, Stephen (default: env > config > Ruth)",
     )
     parser.add_argument(
         "--speed",
@@ -294,20 +299,21 @@ def main() -> None:
     # Resolution order: CLI flag > config.json > built-in default
     voice_id = args.voice or config.get("voice_id", DEFAULT_VOICE_ID)
     speed = args.speed or config.get("speed", DEFAULT_SPEED)
-    region = (
-        args.region
-        or config.get("region")
-        or os.environ.get("AWS_DEFAULT_REGION")
-        or DEFAULT_REGION
-    )
+    region = args.region or config.get("region", DEFAULT_REGION)
+    endpoint_url = config.get("endpoint_url")
+    profile = config.get("profile")
 
     # ── Save config if requested ─────────────────────────────────────────
     if args.save:
-        new_config = {
+        new_config: dict = {
             "voice_id": voice_id,
             "speed": speed,
             "region": region,
         }
+        if endpoint_url:
+            new_config["endpoint_url"] = endpoint_url
+        if profile:
+            new_config["profile"] = profile
         save_config(new_config)
         print(f"Saved config to {CONFIG_FILE}")
 
@@ -347,6 +353,8 @@ def main() -> None:
             voice_id=voice_id,
             speed=speed,
             region=region,
+            endpoint_url=endpoint_url,
+            profile=profile,
         )
         os._exit(0)
     else:
@@ -356,6 +364,8 @@ def main() -> None:
             voice_id=voice_id,
             speed=speed,
             region=region,
+            endpoint_url=endpoint_url,
+            profile=profile,
         )
 
 

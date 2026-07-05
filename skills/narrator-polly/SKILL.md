@@ -35,6 +35,20 @@ Resolve `<skill-path>` by checking these locations in order and using the first 
 
 Always use `--background` (`-b`). This prevents playback from blocking the chat. If a new utterance fires while a previous one is still playing, the old playback is automatically stopped.
 
+## Configuration
+
+All settings are managed via `config.json` in the skill root directory. Available fields:
+
+| Field | Purpose |
+|-------|---------|
+| `voice_id` | Polly voice ID (standard or cloned, e.g. `Ruth` or `vc-XXXXXXXXXX`) |
+| `speed` | Speech rate (x-slow, slow, medium, fast, x-fast) |
+| `region` | AWS region for Polly API calls |
+| `endpoint_url` | Custom Polly endpoint (e.g. gamma for voice cloning) |
+| `profile` | AWS credential profile name |
+
+Edit `config.json` directly to switch between voices or endpoints.
+
 ## When to Speak
 
 ### Required: On activation

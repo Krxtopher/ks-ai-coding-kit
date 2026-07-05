@@ -43,17 +43,51 @@ python3 scripts/speak.py --show-config
 
 ## Configuration
 
-The script reads `config.json` from the skill root directory. Users create/update it with the `--save` flag. Fields:
+The script reads `config.json` from the skill root directory. This file is the single source of truth for all narrator settings. Users can create/update it with the `--save` flag or edit it directly.
+
+All available fields:
 
 ```json
 {
-  "voice_id": "Matthew",
+  "voice_id": "Ruth",
   "speed": "medium",
-  "region": "us-east-1"
+  "region": "us-west-2",
+  "endpoint_url": null,
+  "profile": null
 }
 ```
 
-Resolution order for each setting: CLI flag > config.json > environment variable (region only) > built-in default.
+| Field | Purpose | Default |
+|-------|---------|---------|
+| `voice_id` | Polly voice ID (standard or cloned) | `Ruth` |
+| `speed` | Prosody rate: x-slow, slow, medium, fast, x-fast | `medium` |
+| `region` | AWS region for Polly API calls | `us-west-2` |
+| `endpoint_url` | Custom Polly endpoint (e.g. gamma for voice cloning) | Standard endpoint |
+| `profile` | AWS credential profile name | Default profile |
+
+Resolution order for each setting: **CLI flag > config.json > built-in default**.
+
+### Example: Standard Voice (Ruth)
+
+```json
+{
+  "voice_id": "Ruth",
+  "speed": "medium",
+  "region": "us-west-2"
+}
+```
+
+### Example: Cloned Voice (via gamma endpoint)
+
+```json
+{
+  "voice_id": "vc-56f8fbd479",
+  "speed": "medium",
+  "region": "us-east-1",
+  "endpoint_url": "https://gamma.us-east-1.parrot.a2z.com/",
+  "profile": "polly-shared"
+}
+```
 
 ## Available Generative Voices (English)
 
@@ -61,9 +95,9 @@ These are the voices available with Polly's generative engine for English:
 
 | Voice ID | Language | Gender | Style |
 |----------|----------|--------|-------|
-| Matthew | en-US | Male | Warm, conversational (default) |
+| Ruth | en-US | Female | Calm, composed (default) |
+| Matthew | en-US | Male | Warm, conversational |
 | Stephen | en-US | Male | Clear, professional |
-| Ruth | en-US | Female | Calm, composed |
 | Danielle | en-US | Female | Natural, friendly |
 | Joanna | en-US | Female | Clear, versatile |
 | Salli | en-US | Female | Warm, expressive |
