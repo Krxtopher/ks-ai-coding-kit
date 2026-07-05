@@ -6,8 +6,11 @@ Detailed setup, configuration, and customization guide. The agent does not need 
 
 1. An ElevenLabs account with API access (Creator plan or above recommended)
 2. The `ELEVENLABS_API_KEY` environment variable set to your API key
-3. An audio player installed: **mpv** (recommended) or **ffplay**
+3. An audio player installed: **mpv** (recommended) or **ffplay** — used by `speak.py` for streaming TTS playback
 4. Python dependencies: `pip install -r <skill-path>/requirements.txt`
+
+> [!NOTE]
+> The cold open orchestrator (`orchestrate_open.py`) uses `sounddevice` for real-time audio mixing and does not require an external player or ffmpeg. Only `speak.py` (single-utterance narration) still pipes to mpv/ffplay.
 
 ## Available Voices
 

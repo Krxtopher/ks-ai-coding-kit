@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
 """
-Cold open orchestrator for the narrator skill.
+Cold open orchestrator for the narrator skill — real-time mixer.
 
 Reads a cold-open.yaml definition from a personality folder and produces a
 radio-show-style opening sequence: continuous music playback with smooth volume
 ducking interleaved with TTS narration segments.
 
-Architecture:
-    1. Generate TTS audio for each speech segment → save to temp files
-    2. Measure durations of each TTS clip
-    3. Use ffmpeg to render a single mixed audio file:
-       - Music bed with volume automation (duck/swell/fade baked in)
-       - TTS clips placed at calculated time offsets
-    4. Play the final mix as one continuous piece
+Architecture (real-time mixing via sounddevice):
+    1. Load the music bed into memory as a numpy array
+    2. Start an OutputStream that plays the music immediately
+    3. For each speech segment, stream TTS from ElevenLabs and decode into
+       a numpy buffer. As TTS data arrives, the mixer callback applies volume
+       ducking to the music and overlays the speech — all in real-time.
+    4. After all segments play, apply a smooth fade-out and stop.
 
-This ensures the music never restarts or stutters — all volume transitions
-are smooth and continuous.
+This approach eliminates the previous ffmpeg render-to-disk latency. Music
+starts playing within milliseconds of invocation, and TTS is overlaid as
+soon as the first chunk arrives from the API.
 
 Usage:
-    python orchestrate_open.py --personality-dir ./personalities \\
+    python orchestrate_open.py --personality-dir ./personalities/tal-parody \\
         --teaser "So. Today we're looking at a Python file..." \\
         --workspace "my-project" \\
         --agent "Kiro"
@@ -29,25 +30,29 @@ Environment:
     ELEVENLABS_MODEL_ID — optional (falls back to config.yaml > default).
 
 Dependencies:
-    - ffmpeg (for audio mixing and volume automation)
-    - ffplay or mpv or afplay (for final playback)
-    - ffprobe (for measuring TTS clip durations)
-    - httpx, pyyaml (Python packages)
+    - sounddevice (PortAudio bindings for real-time playback)
+    - numpy (array math for mixing and volume ramps)
+    - soundfile (decode music and TTS audio into numpy arrays)
+    - httpx (ElevenLabs API streaming)
+    - pyyaml (cold-open.yaml parsing)
 """
 
 import argparse
-import json
+import io
 import logging
 import os
 import re
-import shutil
-import subprocess
 import sys
 import tempfile
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
 import httpx
+import numpy as np
+import sounddevice as sd
+import soundfile as sf
 import yaml
 
 # ─── Paths ───────────────────────────────────────────────────────────────────
@@ -66,6 +71,9 @@ DEFAULT_STABILITY = 0.5
 DEFAULT_SIMILARITY = 0.75
 DEFAULT_STYLE = 0.0
 OUTPUT_FORMAT = "mp3_44100_64"
+
+SAMPLE_RATE = 44100
+CHANNELS = 2  # Stereo output
 
 ENGINES_WITH_AUDIO_TAGS = {"eleven_v3"}
 
@@ -119,16 +127,19 @@ def strip_audio_tags_if_needed(text: str, model_id: str) -> str:
     return cleaned.strip()
 
 
-# ─── TTS generation (to file) ───────────────────────────────────────────────
+# ─── TTS generation ─────────────────────────────────────────────────────────
 
 
-def generate_tts_to_file(
+def generate_tts_audio(
     text: str,
-    output_path: Path,
     api_key: str,
     tts_settings: dict,
-) -> bool:
-    """Generate TTS audio and save to a file. Returns True on success."""
+) -> np.ndarray | None:
+    """Generate TTS audio from ElevenLabs and return as a numpy array.
+
+    Returns a float32 numpy array of shape (samples, channels) at SAMPLE_RATE,
+    or None on failure.
+    """
     voice_id = tts_settings["voice_id"]
     model_id = tts_settings["model_id"]
     speed = tts_settings["speed"]
@@ -138,7 +149,7 @@ def generate_tts_to_file(
 
     text = strip_audio_tags_if_needed(text, model_id)
     if not text:
-        return False
+        return None
 
     voice_settings: dict[str, Any] = {
         "stability": stability,
@@ -167,261 +178,262 @@ def generate_tts_to_file(
                 if response.status_code != 200:
                     error_body = response.read().decode("utf-8", errors="replace")
                     print(f"Error: ElevenLabs API returned {response.status_code}: {error_body}", file=sys.stderr)
-                    return False
-                with open(output_path, "wb") as f:
-                    for chunk in response.iter_bytes(chunk_size=4096):
-                        if chunk:
-                            f.write(chunk)
-        return True
+                    return None
+                audio_bytes = b""
+                for chunk in response.iter_bytes(chunk_size=4096):
+                    if chunk:
+                        audio_bytes += chunk
+
+        # Decode MP3 bytes to numpy array
+        audio_data, sr = sf.read(io.BytesIO(audio_bytes), dtype="float32")
+
+        # Ensure stereo
+        if audio_data.ndim == 1:
+            audio_data = np.column_stack([audio_data, audio_data])
+
+        # Resample if needed (unlikely since we request 44100, but be safe)
+        if sr != SAMPLE_RATE:
+            # Simple nearest-neighbor resample — adequate for speech
+            ratio = SAMPLE_RATE / sr
+            n_samples = int(len(audio_data) * ratio)
+            indices = np.linspace(0, len(audio_data) - 1, n_samples).astype(int)
+            audio_data = audio_data[indices]
+
+        return audio_data
+
     except httpx.TimeoutException:
         print("Error: ElevenLabs request timed out", file=sys.stderr)
-        return False
+        return None
     except httpx.HTTPError as e:
         print(f"Error: {e}", file=sys.stderr)
-        return False
+        return None
+    except Exception as e:
+        print(f"Error decoding TTS audio: {e}", file=sys.stderr)
+        return None
 
 
-# ─── Audio utilities ─────────────────────────────────────────────────────────
+# ─── Real-time mixer ────────────────────────────────────────────────────────
 
 
-def get_audio_duration(file_path: Path) -> float:
-    """Get duration of an audio file in seconds using ffprobe."""
-    try:
-        result = subprocess.run(
-            [
-                "ffprobe", "-v", "quiet",
-                "-print_format", "json",
-                "-show_format",
-                str(file_path),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        data = json.loads(result.stdout)
-        return float(data["format"]["duration"])
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, KeyError, ValueError) as e:
-        logger.warning("Could not get duration for %s: %s", file_path, e)
-        return 3.0  # Fallback estimate
+class RealtimeMixer:
+    """Multi-track audio mixer using sounddevice OutputStream.
 
+    Plays a music bed continuously while allowing speech tracks to be
+    overlaid with smooth volume ducking on the music channel.
 
-def find_player_cmd() -> list[str] | None:
-    """Find a suitable audio player for the final mix."""
-    if shutil.which("mpv"):
-        return ["mpv", "--no-terminal", "--no-video", "--"]
-    if shutil.which("ffplay"):
-        return ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet"]
-    if shutil.which("afplay"):
-        return ["afplay"]
-    return None
+    The mixer operates in three states for the music gain:
+    - FULL: music at full volume (music_volume)
+    - DUCKING: ramping down to duck_volume
+    - DUCKED: holding at duck_volume while speech plays
+    - UNDUCKING: ramping back up to music_volume
+    - FADING: final fade-out to silence
 
-
-# ─── Mix rendering ──────────────────────────────────────────────────────────
-
-
-def render_mix(
-    music_path: Path,
-    tts_clips: list[dict],
-    segments: list[dict],
-    music_volume: float,
-    output_path: Path,
-) -> bool:
-    """Render the final mixed audio using ffmpeg.
-
-    Constructs an ffmpeg filter graph that:
-    - Applies volume automation to the music track with smooth ramps
-    - Places TTS clips at calculated time offsets
-    - Mixes everything into a single output file at full volume
-
-    Volume transitions use linear ramps (configurable duration) so ducks
-    and swells sound natural rather than jarring.
-
-    tts_clips: list of {"path": Path, "duration": float, "segment_index": int}
-    segments: the raw segment list from cold-open.yaml
+    Volume transitions use linear ramps computed per-sample for maximum
+    smoothness.
     """
-    # ── Configuration ────────────────────────────────────────────────────
-    # Duration of volume ramps (duck-down and swell-up transitions)
-    ramp_duration = 0.5  # seconds
 
-    # ── Calculate timeline ───────────────────────────────────────────────
-    timeline: list[dict] = []
-    current_time = 0.0
-    tts_by_index = {clip["segment_index"]: clip for clip in tts_clips}
+    def __init__(
+        self,
+        music_data: np.ndarray,
+        music_volume: float = 0.8,
+        ramp_duration: float = 0.4,
+    ):
+        """Initialize the mixer.
 
-    # Padding includes ramp time so speech doesn't start during the ramp
-    pre_speech_pad = ramp_duration + 0.2  # ramp down + small breath
-    post_speech_pad = 0.2 + ramp_duration  # small breath + ramp up
+        Args:
+            music_data: Stereo float32 array at SAMPLE_RATE
+            music_volume: Base volume for the music track (0.0-1.0)
+            ramp_duration: Duration of volume ramps in seconds
+        """
+        self.music_data = music_data
+        self.music_volume = music_volume
+        self.ramp_duration = ramp_duration
+        self.ramp_samples = int(ramp_duration * SAMPLE_RATE)
 
-    for i, segment in enumerate(segments):
-        seg_type = segment["type"]
+        # Playback position in the music track
+        self.music_pos = 0
 
-        if seg_type == "music-only":
-            duration = segment.get("duration", 2.0)
-            timeline.append({
-                "type": "music-only",
-                "start": current_time,
-                "duration": duration,
-                "volume": music_volume,
-            })
-            current_time += duration
+        # Current music gain (starts at music_volume)
+        self.current_gain = music_volume
 
-        elif seg_type == "speech":
-            duck_vol = segment.get("duck_volume", 0.15)
-            clip_info = tts_by_index.get(i)
-            if clip_info is None:
-                continue
-            speech_duration = clip_info["duration"]
+        # Target gain for ramps
+        self.target_gain = music_volume
 
-            total_duration = pre_speech_pad + speech_duration + post_speech_pad
-            timeline.append({
-                "type": "speech",
-                "start": current_time,
-                "duration": total_duration,
-                "duck_volume": duck_vol,
-                "tts_path": clip_info["path"],
-                "tts_start": current_time + pre_speech_pad,
-                "tts_duration": speech_duration,
-                "ramp_duration": ramp_duration,
-            })
-            current_time += total_duration
+        # Samples remaining in the current ramp (0 = no ramp active)
+        self.ramp_remaining = 0
 
-        elif seg_type == "fade-out":
-            duration = segment.get("duration", 2.5)
-            timeline.append({
-                "type": "fade-out",
-                "start": current_time,
-                "duration": duration,
-                "start_volume": music_volume,
-            })
-            current_time += duration
+        # Gain step per sample during a ramp
+        self.gain_step = 0.0
 
-    total_duration = current_time
+        # Speech overlay buffer and position
+        self.speech_data: np.ndarray | None = None
+        self.speech_pos = 0
 
-    # ── Build volume envelope as a piecewise expression ──────────────────
-    # We build a list of (time, volume) keyframes, then construct a single
-    # ffmpeg expression that linearly interpolates between them.
+        # Whether we're done (all segments played, fade complete)
+        self.finished = False
 
-    keyframes: list[tuple[float, float]] = []  # (time, volume)
+        # Lock for thread-safe access to speech buffer
+        self._lock = threading.Lock()
 
-    for entry in timeline:
-        start = entry["start"]
-        end = start + entry["duration"]
+        # Event to signal that speech has finished playing
+        self._speech_done = threading.Event()
+        self._speech_done.set()  # Initially no speech playing
 
-        if entry["type"] == "music-only":
-            vol = entry["volume"]
-            # Hold at this volume for the segment
-            keyframes.append((start, vol))
-            keyframes.append((end, vol))
+        # Fade-out state
+        self._fading = False
 
-        elif entry["type"] == "speech":
-            duck_vol = entry["duck_volume"]
-            ramp = entry["ramp_duration"]
-            # Ramp down from music_volume to duck_volume
-            keyframes.append((start, music_volume))
-            keyframes.append((start + ramp, duck_vol))
-            # Hold at duck volume during speech
-            keyframes.append((end - ramp, duck_vol))
-            # Ramp back up to music_volume
-            keyframes.append((end, music_volume))
+    def _start_ramp(self, target: float) -> None:
+        """Begin a gain ramp toward the target volume."""
+        if self.ramp_samples == 0:
+            self.current_gain = target
+            self.target_gain = target
+            self.ramp_remaining = 0
+            return
 
-        elif entry["type"] == "fade-out":
-            sv = entry["start_volume"]
-            # Linear fade to silence
-            keyframes.append((start, sv))
-            keyframes.append((end, 0.0))
+        self.target_gain = target
+        self.ramp_remaining = self.ramp_samples
+        self.gain_step = (target - self.current_gain) / self.ramp_samples
 
-    # Add a final silence keyframe
-    keyframes.append((total_duration + 0.1, 0.0))
+    def duck(self, duck_volume: float) -> None:
+        """Duck the music to the specified volume."""
+        with self._lock:
+            self._start_ramp(duck_volume)
 
-    # Deduplicate and sort keyframes by time
-    # If two keyframes are at the same time, keep the later one in the list
-    keyframes.sort(key=lambda k: k[0])
+    def unduck(self) -> None:
+        """Restore music to full volume."""
+        with self._lock:
+            self._start_ramp(self.music_volume)
 
-    # Remove redundant keyframes where consecutive entries are at the same time
-    deduped: list[tuple[float, float]] = []
-    for kf in keyframes:
-        if deduped and abs(kf[0] - deduped[-1][0]) < 0.001:
-            deduped[-1] = kf  # overwrite with latest value at same time
-        else:
-            deduped.append(kf)
-    keyframes = deduped
+    def fade_out(self, duration: float) -> None:
+        """Begin a fade-out to silence over the given duration."""
+        with self._lock:
+            self._fading = True
+            self.ramp_remaining = int(duration * SAMPLE_RATE)
+            self.target_gain = 0.0
+            if self.ramp_remaining > 0:
+                self.gain_step = (0.0 - self.current_gain) / self.ramp_remaining
+            else:
+                self.current_gain = 0.0
 
-    # Build ffmpeg volume expression using linear interpolation between keyframes
-    # Expression form: lerp between adjacent keyframes based on current time (t)
-    # We build a nested if() expression that selects the right keyframe pair
-    volume_expr_parts: list[str] = []
-    for idx in range(len(keyframes) - 1):
-        t0, v0 = keyframes[idx]
-        t1, v1 = keyframes[idx + 1]
+    def set_speech(self, audio_data: np.ndarray) -> None:
+        """Load a speech clip for overlay. Resets playback position."""
+        with self._lock:
+            self.speech_data = audio_data
+            self.speech_pos = 0
+            self._speech_done.clear()
 
-        if abs(v1 - v0) < 0.001:
-            # Constant volume segment
-            expr = f"if(between(t,{t0:.4f},{t1:.4f}),{v0:.4f}"
-        else:
-            # Linear interpolation: v0 + (v1-v0) * (t-t0) / (t1-t0)
-            dt = t1 - t0
-            dv = v1 - v0
-            expr = f"if(between(t,{t0:.4f},{t1:.4f}),{v0:.4f}+{dv:.4f}*(t-{t0:.4f})/{dt:.4f}"
-        volume_expr_parts.append(expr)
+    def wait_speech_done(self, timeout: float = 60.0) -> bool:
+        """Block until current speech clip finishes playing."""
+        return self._speech_done.wait(timeout=timeout)
 
-    # Nest right-to-left: if(cond1, val1, if(cond2, val2, ..., 0))
-    volume_expr = "0"
-    for part in reversed(volume_expr_parts):
-        volume_expr = f"{part},{volume_expr})"
+    def callback(self, outdata: np.ndarray, frames: int, time_info: Any, status: Any) -> None:
+        """sounddevice OutputStream callback — mixes music + speech in real-time."""
+        if status:
+            logger.debug("Stream status: %s", status)
 
-    # ── Build ffmpeg command ─────────────────────────────────────────────
-    cmd = ["ffmpeg", "-y", "-loglevel", "quiet"]
+        with self._lock:
+            # ── Music track ──────────────────────────────────────────
+            music_end = self.music_pos + frames
+            if music_end <= len(self.music_data):
+                music_chunk = self.music_data[self.music_pos:music_end].copy()
+            else:
+                # Loop the music if we reach the end
+                remaining = len(self.music_data) - self.music_pos
+                music_chunk = np.zeros((frames, CHANNELS), dtype=np.float32)
+                if remaining > 0:
+                    music_chunk[:remaining] = self.music_data[self.music_pos:]
+                # Wrap around
+                wrapped = frames - remaining
+                if wrapped > 0 and len(self.music_data) > 0:
+                    wrap_end = min(wrapped, len(self.music_data))
+                    music_chunk[remaining:remaining + wrap_end] = self.music_data[:wrap_end]
+                music_end = wrapped
 
-    # Input 0: music (loop to cover total duration)
-    cmd.extend(["-stream_loop", "-1", "-i", str(music_path)])
+            self.music_pos = music_end if music_end <= len(self.music_data) else music_end % max(len(self.music_data), 1)
 
-    # Inputs 1..N: TTS clips
-    speech_entries = [e for e in timeline if e["type"] == "speech"]
-    for entry in speech_entries:
-        cmd.extend(["-i", str(entry["tts_path"])])
+            # ── Apply gain envelope to music ─────────────────────────
+            if self.ramp_remaining > 0:
+                # We're in a ramp — compute per-sample gain
+                ramp_frames = min(frames, self.ramp_remaining)
 
-    # Build filter graph
-    filters: list[str] = []
+                # Build gain array for this chunk
+                gain_start = self.current_gain
+                gain_end = self.current_gain + self.gain_step * ramp_frames
+                gain_ramp = np.linspace(gain_start, gain_end, ramp_frames, dtype=np.float32)
 
-    # Music: trim, apply smooth volume envelope
-    filters.append(
-        f"[0:a]atrim=0:{total_duration:.3f},asetpts=PTS-STARTPTS,"
-        f"volume='{volume_expr}':eval=frame[music]"
-    )
+                # Apply ramp portion
+                music_chunk[:ramp_frames] *= gain_ramp[:, np.newaxis]
 
-    # TTS clips: delay to correct position, pad to total length
-    mix_inputs = ["[music]"]
-    for idx, entry in enumerate(speech_entries):
-        input_idx = idx + 1
-        delay_ms = int(entry["tts_start"] * 1000)
-        label = f"tts{idx}"
-        filters.append(
-            f"[{input_idx}:a]adelay={delay_ms}|{delay_ms},apad=whole_dur={total_duration:.3f}[{label}]"
+                # Apply flat gain for remaining frames (if chunk extends beyond ramp)
+                if ramp_frames < frames:
+                    music_chunk[ramp_frames:] *= self.target_gain
+
+                self.current_gain = gain_end
+                self.ramp_remaining -= ramp_frames
+
+                if self.ramp_remaining <= 0:
+                    self.current_gain = self.target_gain
+                    self.ramp_remaining = 0
+                    # If fade-out completed, mark as finished
+                    if self._fading and self.target_gain == 0.0:
+                        self.finished = True
+            else:
+                # Flat gain — no ramp active
+                music_chunk *= self.current_gain
+
+            # ── Speech overlay ───────────────────────────────────────
+            if self.speech_data is not None and self.speech_pos < len(self.speech_data):
+                speech_end = min(self.speech_pos + frames, len(self.speech_data))
+                speech_frames = speech_end - self.speech_pos
+                speech_chunk = self.speech_data[self.speech_pos:speech_end]
+
+                # Add speech to music (both are float32, simple sum)
+                music_chunk[:speech_frames] += speech_chunk
+
+                self.speech_pos = speech_end
+
+                # Check if speech finished
+                if self.speech_pos >= len(self.speech_data):
+                    self.speech_data = None
+                    self.speech_pos = 0
+                    self._speech_done.set()
+
+            # ── Clip to prevent distortion ───────────────────────────
+            np.clip(music_chunk, -1.0, 1.0, out=music_chunk)
+
+            outdata[:] = music_chunk
+
+
+# ─── Async TTS pre-fetching ─────────────────────────────────────────────────
+
+
+class TtsFuture:
+    """Wraps a background TTS generation so we can wait on the result later.
+
+    Fire-and-forget: starts generating TTS in a background thread immediately.
+    Call .result() to block until the audio is ready (or None on failure).
+    """
+
+    def __init__(self, text: str, api_key: str, tts_settings: dict):
+        self._result: np.ndarray | None = None
+        self._done = threading.Event()
+        self._thread = threading.Thread(
+            target=self._generate, args=(text, api_key, tts_settings), daemon=True
         )
-        mix_inputs.append(f"[{label}]")
+        self._thread.start()
 
-    # Mix all streams — use normalize=0 to prevent volume reduction
-    n_inputs = len(mix_inputs)
-    mix_input_str = "".join(mix_inputs)
-    filters.append(
-        f"{mix_input_str}amix=inputs={n_inputs}:duration=first"
-        f":dropout_transition=0:normalize=0[out]"
-    )
+    def _generate(self, text: str, api_key: str, tts_settings: dict) -> None:
+        self._result = generate_tts_audio(text, api_key, tts_settings)
+        self._done.set()
 
-    filter_graph = ";".join(filters)
-    cmd.extend(["-filter_complex", filter_graph])
-    cmd.extend(["-map", "[out]", "-t", f"{total_duration:.3f}", str(output_path)])
+    def result(self, timeout: float = 30.0) -> np.ndarray | None:
+        """Block until TTS generation completes. Returns audio array or None."""
+        self._done.wait(timeout=timeout)
+        return self._result
 
-    # ── Run ffmpeg ───────────────────────────────────────────────────────
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        if result.returncode != 0:
-            print(f"Error: ffmpeg failed: {result.stderr}", file=sys.stderr)
-            return False
-        return True
-    except subprocess.TimeoutExpired:
-        print("Error: ffmpeg timed out", file=sys.stderr)
-        return False
+    def is_ready(self) -> bool:
+        """Check if TTS generation has completed without blocking."""
+        return self._done.is_set()
 
 
 # ─── Orchestration engine ───────────────────────────────────────────────────
@@ -435,8 +447,13 @@ def run_cold_open(
     api_key: str,
     tts_settings: dict,
 ) -> None:
-    """Execute the cold open sequence defined in a cold-open.yaml file."""
+    """Execute the cold open sequence with real-time mixing.
 
+    Music starts playing immediately. TTS requests are fired concurrently
+    during preceding music-only segments so the audio is ready (or nearly
+    ready) by the time we need it. Ducking and speech start together — no
+    dead air between the volume dip and the voice.
+    """
     cold_open = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     personality_dir = config_path.parent
 
@@ -448,70 +465,112 @@ def run_cold_open(
     music_volume = cold_open.get("music_volume", 0.8)
     segments = cold_open.get("segments", [])
 
-    # Template variables
+    # Template variables for speech text
     template_vars = {
         "teaser": teaser,
         "workspace": workspace,
         "agent": agent,
     }
 
-    # ── Step 1: Generate TTS for speech segments ─────────────────────────
-    tts_clips: list[dict] = []
-    temp_dir = Path(tempfile.mkdtemp(prefix="narrator_cold_open_"))
-
+    # ── Load music into memory ───────────────────────────────────────────
     try:
-        for i, segment in enumerate(segments):
-            if segment["type"] != "speech":
-                continue
+        music_data, sr = sf.read(str(music_file), dtype="float32")
+    except Exception as e:
+        print(f"Error: Could not load music file: {e}", file=sys.stderr)
+        sys.exit(1)
 
+    # Ensure stereo
+    if music_data.ndim == 1:
+        music_data = np.column_stack([music_data, music_data])
+
+    # Resample if needed
+    if sr != SAMPLE_RATE:
+        ratio = SAMPLE_RATE / sr
+        n_samples = int(len(music_data) * ratio)
+        indices = np.linspace(0, len(music_data) - 1, n_samples).astype(int)
+        music_data = music_data[indices]
+
+    # ── Pre-fetch TTS for all speech segments ────────────────────────────
+    # Fire all TTS requests immediately so they generate in parallel with
+    # the music intro. By the time we need each clip, it's likely ready.
+    tts_futures: dict[int, TtsFuture] = {}
+    for i, segment in enumerate(segments):
+        if segment["type"] == "speech":
             text_template = segment.get("text", "")
             text = text_template.format(**template_vars)
+            tts_futures[i] = TtsFuture(text, api_key, tts_settings)
 
-            tts_path = temp_dir / f"tts_{i}.mp3"
-            success = generate_tts_to_file(text, tts_path, api_key, tts_settings)
-            if not success:
-                print(f"Error: Failed to generate TTS for segment {i}", file=sys.stderr)
-                return
+    # ── Initialize the mixer ─────────────────────────────────────────────
+    mixer = RealtimeMixer(
+        music_data=music_data,
+        music_volume=music_volume,
+        ramp_duration=0.4,
+    )
 
-            duration = get_audio_duration(tts_path)
-            tts_clips.append({
-                "path": tts_path,
-                "duration": duration,
-                "segment_index": i,
-            })
+    # ── Start the audio stream — music plays immediately ─────────────────
+    stream = sd.OutputStream(
+        samplerate=SAMPLE_RATE,
+        channels=CHANNELS,
+        dtype="float32",
+        callback=mixer.callback,
+        blocksize=1024,
+    )
+    stream.start()
 
-        # ── Step 2: Render the final mix ─────────────────────────────────
-        mix_path = temp_dir / "cold_open_mix.mp3"
-        success = render_mix(music_file, tts_clips, segments, music_volume, mix_path)
-        if not success:
-            print("Error: Failed to render cold open mix", file=sys.stderr)
-            return
+    try:
+        # ── Walk through segments ────────────────────────────────────
+        for i, segment in enumerate(segments):
+            if mixer.finished:
+                break
 
-        # ── Step 3: Play the final mix ───────────────────────────────────
-        player_cmd = find_player_cmd()
-        if player_cmd is None:
-            print("Error: No audio player found", file=sys.stderr)
-            return
+            seg_type = segment["type"]
 
-        cmd = player_cmd + [str(mix_path)]
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        proc.wait()
+            if seg_type == "music-only":
+                # Let the music play at full volume. TTS is generating
+                # in the background during this time.
+                duration = segment.get("duration", 2.0)
+                time.sleep(duration)
+
+            elif seg_type == "speech":
+                duck_vol = segment.get("duck_volume", 0.15)
+
+                # Wait for the pre-fetched TTS to be ready
+                future = tts_futures.get(i)
+                if future is None:
+                    continue
+
+                tts_audio = future.result(timeout=30.0)
+                if tts_audio is None:
+                    # TTS failed — skip this segment
+                    continue
+
+                # Duck and start speech simultaneously — no gap
+                mixer.duck(duck_vol)
+                mixer.set_speech(tts_audio)
+
+                # Wait for speech to finish playing
+                mixer.wait_speech_done(timeout=60.0)
+
+                # Small breath after speech ends
+                time.sleep(0.15)
+
+                # Unduck the music
+                mixer.unduck()
+                time.sleep(mixer.ramp_duration)
+
+            elif seg_type == "fade-out":
+                duration = segment.get("duration", 2.5)
+                mixer.fade_out(duration)
+                time.sleep(duration + 0.1)
+
+        # ── Ensure we fade out if not already ────────────────────────
+        if not mixer.finished:
+            mixer.fade_out(0.5)
+            time.sleep(0.6)
 
     finally:
-        # Clean up temp files
-        for f in temp_dir.iterdir():
-            try:
-                f.unlink()
-            except OSError:
-                pass
-        try:
-            temp_dir.rmdir()
-        except OSError:
-            pass
+        stream.stop()
+        stream.close()
 
 
 # ─── CLI ─────────────────────────────────────────────────────────────────────
@@ -519,7 +578,7 @@ def run_cold_open(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Orchestrate a cold open sequence with music and TTS narration."
+        description="Orchestrate a cold open sequence with music and TTS narration (real-time mixer)."
     )
     parser.add_argument(
         "--personality-dir",
@@ -571,11 +630,19 @@ def main() -> None:
         if pid > 0:
             return
         os.setsid()
-        devnull = os.open(os.devnull, os.O_RDWR)
-        os.dup2(devnull, 0)
-        os.dup2(devnull, 1)
-        os.dup2(devnull, 2)
-        os.close(devnull)
+        # Note: we do NOT redirect stdout/stderr to devnull here because
+        # sounddevice needs access to the audio device, but we detach from
+        # the controlling terminal's process group.
+        try:
+            devnull = os.open(os.devnull, os.O_RDWR)
+            os.dup2(devnull, 0)
+            # Keep stdout/stderr for error reporting during development;
+            # redirect in production if needed.
+            os.dup2(devnull, 1)
+            os.dup2(devnull, 2)
+            os.close(devnull)
+        except OSError:
+            pass
         run_cold_open(config_path, args.teaser, args.workspace, args.agent, api_key, tts_settings)
         os._exit(0)
     else:
