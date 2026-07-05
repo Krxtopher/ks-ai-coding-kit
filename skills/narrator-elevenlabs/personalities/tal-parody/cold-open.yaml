@@ -14,7 +14,7 @@
 # ───────────────────────────────────────────────────────────────────────────────
 
 # Music file relative to this yaml file's directory
-music: tal-music.mp3
+music: cold-open-music.mp3
 
 # Master volume for the music track (0.0–1.0)
 music_volume: 0.8
@@ -36,7 +36,7 @@ segments:
   # 4. Music ducks again, fixed signoff plays
   - type: speech
     duck_volume: 0.25
-    text: "From WBEZ Chicago and the {workspace} directory, this is {agent}. Stay with us."
+    text: "From WBEZ Chicago and the {workspace} directory, I'm {agent}. Stay with us."
 
   # 5. Music fades out
   - type: fade-out

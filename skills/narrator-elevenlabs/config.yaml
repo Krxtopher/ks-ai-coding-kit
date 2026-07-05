@@ -1,3 +1,6 @@
+# Active personality (folder name under personalities/)
+personality: default
+
 # ElevenLabs voice ID (browse voices at https://elevenlabs.io/voice-library)
 voice_id: 4e32WqNVWRquDa1OcRYZ
 

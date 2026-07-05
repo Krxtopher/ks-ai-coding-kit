@@ -118,6 +118,9 @@ python3 scripts/speak.py --show-config
 The script reads `config.yaml` from the skill root directory. Users create/update it with the `--save` flag. The YAML format supports inline comments explaining each parameter:
 
 ```yaml
+# Active personality (folder name under personalities/)
+personality: default
+
 # ElevenLabs voice ID (browse voices at https://elevenlabs.io/voice-library)
 voice_id: 4e32WqNVWRquDa1OcRYZ
 
@@ -138,6 +141,55 @@ style: 0.0
 ```
 
 Resolution order for each setting: CLI flag > config.yaml > environment variable > built-in default.
+
+## Personalities
+
+Personalities define how the narrator speaks — tone, style, and optional orchestrated cold opens. Each personality lives in its own subdirectory under `personalities/`:
+
+```
+personalities/
+├── default/
+│   └── personality.md
+└── tal-parody/
+    ├── personality.md
+    ├── cold-open.yaml        (optional)
+    └── cold-open-music.mp3   (optional, referenced by cold-open.yaml)
+```
+
+### Structure
+
+Each personality folder contains:
+
+| File | Required | Purpose |
+|------|----------|---------|
+| `personality.md` | Yes | Defines voice style, tone, structural beats, and audio tag preferences |
+| `cold-open.yaml` | No | Orchestrated session opener with music and TTS sequencing |
+| `cold-open-music.mp3` | No | Music file for the cold open (referenced by `cold-open.yaml`) |
+
+A `personality.md` may include optional YAML frontmatter with a recommended `voice_id`:
+
+```yaml
+---
+voice_id: 7JdSzlCTq267fQMisLMY
+---
+```
+
+When present, the agent will offer to switch to this voice when the personality is activated. The user can accept or keep their current voice.
+
+### Switching Personalities
+
+Change the `personality` value in `config.yaml` to the folder name of the desired personality:
+
+```yaml
+personality: tal-parody
+```
+
+### Creating a New Personality
+
+1. Create a new folder under `personalities/` (e.g. `personalities/my-style/`)
+2. Add a `personality.md` describing the voice style
+3. Optionally add `cold-open.yaml` and `cold-open-music.mp3` for an orchestrated session opener
+4. Update `config.yaml` to point to the new folder name
 
 ## Voice Settings
 
