@@ -9,13 +9,33 @@ Detailed setup, configuration, and customization guide. The agent does not need 
 3. An audio player installed: **mpv** (recommended) or **ffplay**
 4. Python dependencies: `pip install -r <skill-path>/requirements.txt`
 
+## Available Voices
+
+Recommended voices tested for narrator use. Ryan and Eryn are the top picks for male and female voices respectively.
+
+**Male voices:**
+
+| Voice ID | Name | Style |
+|----------|------|-------|
+| `4e32WqNVWRquDa1OcRYZ` | Ryan | Natural, conversational (default) |
+| `lUTamkMw7gOzZbFIwmq4` | James | Clear, articulate, British |
+
+**Female voices:**
+
+| Voice ID | Name | Style |
+|----------|------|-------|
+| `DXFkLCBUTmvXpp2QwZjA` | Eryn | Natural, expressive (recommended) |
+| `19STyYD15bswVz51nqLf` | Samara X | Confident, British |
+
+Browse all voices at https://elevenlabs.io/voice-library or use the Voices API to list your own cloned voices.
+
 ## Environment Variables
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
 | `ELEVENLABS_API_KEY` | API key (required) | — |
-| `ELEVENLABS_VOICE_ID` | Default voice ID | `JBFqnCBsd6RMkjVDRZzb` (George) |
-| `ELEVENLABS_MODEL_ID` | Default model/engine | `eleven_v3` |
+| `ELEVENLABS_VOICE_ID` | Default voice ID | `4e32WqNVWRquDa1OcRYZ` (Ryan) |
+| `ELEVENLABS_MODEL_ID` | Default model/engine | `eleven_multilingual_v2` |
 
 ## Model Selection
 
@@ -23,8 +43,8 @@ The script supports multiple ElevenLabs models via the `--model` flag or `model_
 
 | Model ID | Audio Tags | Style Param | Char Limit | Notes |
 |----------|:----------:|:-----------:|:----------:|-------|
-| `eleven_v3` | Yes | No | 5,000 | Most expressive. Uses audio tags for delivery control. Default. |
-| `eleven_multilingual_v2` | No | Yes | 10,000 | Stable narration, 29 languages. Best for cloned voices. |
+| `eleven_v3` | Yes | No | 5,000 | Most expressive. Uses audio tags for delivery control. |
+| `eleven_multilingual_v2` | No | Yes | 10,000 | Stable narration, 29 languages. Best for cloned voices. Default. |
 | `eleven_flash_v2_5` | No | Yes | 40,000 | Ultra-low latency (~75ms), 32 languages. |
 | `eleven_flash_v2` | No | Yes | 30,000 | Ultra-low latency, English only. |
 
@@ -86,8 +106,8 @@ python3 scripts/speak.py --message "Hello world"
 # Pipe text via stdin
 echo "Hello world" | python3 scripts/speak.py -b
 
-# Save current settings to config.json
-python3 scripts/speak.py -b --message "Hello" --voice "abc123" --model eleven_v3 --speed 1.1 --save
+# Save current settings to config.yaml
+python3 scripts/speak.py -b --message "Hello" --voice "abc123" --model eleven_multilingual_v2 --speed 1.1 --save
 
 # Show saved configuration
 python3 scripts/speak.py --show-config
@@ -95,20 +115,29 @@ python3 scripts/speak.py --show-config
 
 ## Configuration
 
-The script reads `config.json` from the skill root directory. Users create/update it with the `--save` flag. Fields:
+The script reads `config.yaml` from the skill root directory. Users create/update it with the `--save` flag. The YAML format supports inline comments explaining each parameter:
 
-```json
-{
-  "voice_id": "JBFqnCBsd6RMkjVDRZzb",
-  "model_id": "eleven_v3",
-  "speed": 1.0,
-  "stability": 0.5,
-  "similarity_boost": 0.75,
-  "style": 0.0
-}
+```yaml
+# ElevenLabs voice ID (browse voices at https://elevenlabs.io/voice-library)
+voice_id: 4e32WqNVWRquDa1OcRYZ
+
+# Model engine: eleven_multilingual_v2, eleven_v3, eleven_flash_v2_5, eleven_flash_v2
+model_id: eleven_multilingual_v2
+
+# Speech speed multiplier (0.7–1.2, default: 1.0)
+speed: 1.0
+
+# Voice consistency (0.0–1.0, default: 0.5). Lower = more expressive, higher = more stable.
+stability: 0.5
+
+# How closely to match the original voice (0.0–1.0, default: 0.75)
+similarity_boost: 0.75
+
+# Style exaggeration (0.0–1.0, default: 0.0). Higher adds latency. Only used by v2 models.
+style: 0.0
 ```
 
-Resolution order for each setting: CLI flag > config.json > environment variable > built-in default.
+Resolution order for each setting: CLI flag > config.yaml > environment variable > built-in default.
 
 ## Voice Settings
 
@@ -118,20 +147,6 @@ Resolution order for each setting: CLI flag > config.json > environment variable
 | `similarity_boost` | 0.0–1.0 | 0.75 | How closely to match the original voice timbre. |
 | `style` | 0.0–1.0 | 0.0 | Amplifies the speaker's style. Higher values add latency. Only sent to v2 models. |
 | `speed` | 0.7–1.2 | 1.0 | Playback speed multiplier. Extreme values may degrade quality. |
-
-## Available Voices
-
-| Voice ID | Name | Style |
-|----------|------|-------|
-| `JBFqnCBsd6RMkjVDRZzb` | George | Warm, conversational (default) |
-| `pNInz6obpgDQGcFmaJgB` | Adam | Deep, authoritative |
-| `ErXwobaYiN019PkySvjV` | Antoni | Young, friendly |
-| `VR6AewLTigWG4xSOukaG` | Arnold | Confident, energetic |
-| `onwK4e9ZLuTAKqWW03F9` | Daniel | British, warm |
-| `TX3LPaxmHKxFdv7VOQHJ` | Liam | American, natural |
-| `NOpBlnGInO9m6vDvFkFC` | Spuds Oxley | Old storyteller, expressive |
-
-Browse all voices at https://elevenlabs.io/voice-library or use the Voices API to list your own cloned voices.
 
 ## Cost Awareness
 

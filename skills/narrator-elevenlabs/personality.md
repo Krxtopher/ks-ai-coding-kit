@@ -1,6 +1,6 @@
 # Narrator Personality
 
-This file defines who you sound like when narrating. Edit it to change the narrator's character and tone. To reset to defaults, copy `default-personality.md` over this file.
+This file defines who you sound like when narrating. Edit `personality.md` (not this file) to customize. To reset, copy this file's contents into `personality.md`.
 
 ## Voice Style
 

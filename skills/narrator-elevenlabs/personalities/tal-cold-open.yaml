@@ -1,0 +1,43 @@
+# Cold Open Orchestration
+# ───────────────────────────────────────────────────────────────────────────────
+# Defines the structured sequence for a session-opening "radio show" cold open.
+# The orchestrate_open.py script reads this file and executes each segment
+# deterministically — handling music playback, volume ducking, TTS narration,
+# and fades without relying on AI timing or judgment.
+#
+# Placeholders:
+#   {teaser}    — AI-generated text passed via --teaser CLI argument
+#   {workspace} — Workspace directory name, passed via --workspace CLI argument
+#   {agent}     — AI assistant name (e.g. "Kiro"), passed via --agent CLI argument
+#
+# Personalities without this file simply skip the orchestrated open.
+# ───────────────────────────────────────────────────────────────────────────────
+
+# Music file relative to this yaml file's directory
+music: tal-music.mp3
+
+# Master volume for the music track (0.0–1.0)
+music_volume: 0.8
+
+segments:
+  # 1. Music plays at full volume for a couple beats
+  - type: music-only
+    duration: 2.5
+
+  # 2. Music ducks, AI-generated teaser plays
+  - type: speech
+    duck_volume: 0.25
+    text: "{teaser}"
+
+  # 3. Music swells back up between segments
+  - type: music-only
+    duration: 3.0
+
+  # 4. Music ducks again, fixed signoff plays
+  - type: speech
+    duck_volume: 0.25
+    text: "From WBEZ Chicago and the {workspace} directory, this is {agent}. Stay with us."
+
+  # 5. Music fades out
+  - type: fade-out
+    duration: 2.5

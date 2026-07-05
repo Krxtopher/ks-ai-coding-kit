@@ -1,0 +1,17 @@
+# ElevenLabs voice ID (browse voices at https://elevenlabs.io/voice-library)
+voice_id: 4e32WqNVWRquDa1OcRYZ
+
+# Model engine: eleven_multilingual_v2, eleven_v3, eleven_flash_v2_5, eleven_flash_v2
+model_id: eleven_v3
+
+# Speech speed multiplier (0.7–1.2, default: 1.0)
+speed: 0.95
+
+# Voice consistency (0.0–1.0, default: 0.5). Lower = more expressive, higher = more stable.
+stability: 0.5
+
+# How closely to match the original voice (0.0–1.0, default: 0.75)
+similarity_boost: 0.75
+
+# Style exaggeration (0.0–1.0, default: 0.0). Higher adds latency. Only used by v2 models.
+style: 0.0

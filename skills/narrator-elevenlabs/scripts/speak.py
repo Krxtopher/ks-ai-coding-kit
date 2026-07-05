@@ -24,7 +24,6 @@ Environment:
 """
 
 import argparse
-import json
 import logging
 import os
 import re
@@ -34,14 +33,15 @@ import sys
 from pathlib import Path
 
 import httpx
+import yaml
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 
 API_BASE = "https://api.elevenlabs.io/v1"
-DEFAULT_MODEL_ID = "eleven_v3"
+DEFAULT_MODEL_ID = "eleven_multilingual_v2"
 
-# Default voice: "George" — warm, conversational male voice
-DEFAULT_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"
+# Default voice: "Ryan" — natural, conversational male voice
+DEFAULT_VOICE_ID = "4e32WqNVWRquDa1OcRYZ"
 DEFAULT_SPEED = 1.0
 DEFAULT_STABILITY = 0.5
 DEFAULT_SIMILARITY = 0.75
@@ -52,7 +52,7 @@ OUTPUT_FORMAT = "mp3_44100_64"
 
 # Config file lives alongside the skill (one level up from scripts/)
 SCRIPT_DIR = Path(__file__).resolve().parent
-CONFIG_FILE = SCRIPT_DIR.parent / "config.json"
+CONFIG_FILE = SCRIPT_DIR.parent / "config.yaml"
 
 logger = logging.getLogger(__name__)
 
@@ -125,21 +125,35 @@ def strip_audio_tags(text: str) -> str:
 
 
 def load_config() -> dict:
-    """Load user preferences from config.json if it exists."""
+    """Load user preferences from config.yaml if it exists."""
     if CONFIG_FILE.exists():
         try:
-            return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError) as e:
+            return yaml.safe_load(CONFIG_FILE.read_text(encoding="utf-8")) or {}
+        except (yaml.YAMLError, OSError) as e:
             logger.warning("Could not read config file: %s", e)
     return {}
 
 
 def save_config(config: dict) -> None:
-    """Write user preferences to config.json."""
+    """Write user preferences to config.yaml with descriptive comments."""
+    comments = {
+        "voice_id": "# ElevenLabs voice ID (browse voices at https://elevenlabs.io/voice-library)",
+        "model_id": "# Model engine: eleven_multilingual_v2, eleven_v3, eleven_flash_v2_5, eleven_flash_v2",
+        "speed": "# Speech speed multiplier (0.7\u20131.2, default: 1.0)",
+        "stability": "# Voice consistency (0.0\u20131.0, default: 0.5). Lower = more expressive, higher = more stable.",
+        "similarity_boost": "# How closely to match the original voice (0.0\u20131.0, default: 0.75)",
+        "style": "# Style exaggeration (0.0\u20131.0, default: 0.0). Higher adds latency. Only used by v2 models.",
+    }
+    key_order = ["voice_id", "model_id", "speed", "stability", "similarity_boost", "style"]
+    lines: list[str] = []
+    for key in key_order:
+        if key in config:
+            if key in comments:
+                lines.append(comments[key])
+            lines.append(f"{key}: {config[key]}")
+            lines.append("")
     try:
-        CONFIG_FILE.write_text(
-            json.dumps(config, indent=2) + "\n", encoding="utf-8"
-        )
+        CONFIG_FILE.write_text("\n".join(lines), encoding="utf-8")
     except OSError as e:
         print(f"Error: Could not save config: {e}", file=sys.stderr)
 
@@ -158,8 +172,8 @@ def find_player() -> list[str] | None:
             "mpv",
             "--no-terminal",
             "--no-video",
-            "--demuxer-max-bytes=128KiB",
-            "--demuxer-readahead-secs=0.5",
+            "--demuxer-max-bytes=512KiB",
+            "--audio-buffer=1",
             "-",
         ]
     if shutil.which("ffplay"):
@@ -215,12 +229,16 @@ def stream_speech(
     stability: float,
     similarity_boost: float,
     style: float,
+    record_pid: bool = False,
 ) -> None:
     """Stream TTS audio from ElevenLabs and pipe directly to audio player.
 
     Automatically adapts the request payload based on the selected model's
     capabilities — stripping audio tags, omitting unsupported voice_settings
     parameters, and truncating text to the model's character limit.
+
+    If record_pid is True, writes the player process PID to the lockfile
+    so subsequent invocations can pre-empt playback.
     """
     player_cmd = find_player()
     if player_cmd is None:
@@ -280,6 +298,10 @@ def stream_speech(
         stderr=subprocess.DEVNULL,
     )
 
+    # Record the player's PID so subsequent utterances can pre-empt it
+    if record_pid:
+        _record_player_pid(player_proc.pid)
+
     try:
         with httpx.Client(timeout=30.0) as client:
             with client.stream("POST", url, params=params, headers=headers, json=body) as response:
@@ -335,7 +357,7 @@ def main() -> None:
         "--model",
         default=None,
         help=(
-            "ElevenLabs model ID (default: config > env > eleven_v3). "
+            "ElevenLabs model ID (default: config > env > eleven_multilingual_v2). "
             "Examples: eleven_v3, eleven_multilingual_v2, eleven_flash_v2_5"
         ),
     )
@@ -371,7 +393,7 @@ def main() -> None:
     parser.add_argument(
         "--save",
         action="store_true",
-        help="Save current settings (voice, model, speed, stability, similarity, style) to config.json",
+        help="Save current settings (voice, model, speed, stability, similarity, style) to config.yaml",
     )
     parser.add_argument(
         "--show-config",
@@ -384,7 +406,7 @@ def main() -> None:
     if args.show_config:
         config = load_config()
         if config:
-            print(json.dumps(config, indent=2))
+            print(yaml.dump(config, default_flow_style=False).strip())
         else:
             print("No config file found. Using defaults.")
         return
@@ -392,7 +414,7 @@ def main() -> None:
     # ── Load persisted preferences ───────────────────────────────────────
     config = load_config()
 
-    # Resolution order: CLI flag > config.json > env var > built-in default
+    # Resolution order: CLI flag > config.yaml > env var > built-in default
     voice_id = (
         args.voice
         or config.get("voice_id")
@@ -452,8 +474,7 @@ def main() -> None:
         _kill_previous_player()  # Pre-empt any ongoing narration
         pid = os.fork()
         if pid > 0:
-            # Parent — record child PID for pre-emption, then exit immediately
-            _record_player_pid(pid)
+            # Parent — exit immediately; child will record player PID itself
             return
         # Child — detach from parent's process group
         os.setsid()
@@ -472,6 +493,7 @@ def main() -> None:
             stability=stability,
             similarity_boost=similarity,
             style=style,
+            record_pid=True,
         )
         os._exit(0)
     else:
