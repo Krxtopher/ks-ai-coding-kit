@@ -26,12 +26,14 @@ python3 <skill-path>/scripts/speak.py --background --message "<your utterance>"
 
 Resolve `<skill-path>` by checking these locations in order and using the first that exists:
 
-1. `.kiro/skills/narrator-polly`
-2. `~/.kiro/skills/narrator-polly`
-3. `.claude/skills/narrator-polly`
-4. `~/.claude/skills/narrator-polly`
-5. `.agents/skills/narrator-polly`
-6. `~/.agents/skills/narrator-polly`
+1. `.agents/skills/narrator-polly`
+2. `~/.agents/skills/narrator-polly`
+3. `.kiro/skills/narrator-polly`
+4. `~/.kiro/skills/narrator-polly`
+5. `.claude/skills/narrator-polly`
+6. `~/.claude/skills/narrator-polly`
+
+**Important:** Always resolve the path to its absolute form (e.g. `/Users/you/project/.agents/skills/narrator-polly`) before invoking any scripts. Do not pass relative paths like `.agents/skills/...` to `python3`. Using absolute paths ensures consistent command strings, which makes it possible to define Kiro approval glob patterns that match without repeated permission prompts.
 
 Always use `--background` (`-b`). This prevents playback from blocking the chat. If a new utterance fires while a previous one is still playing, the old playback is automatically stopped.
 
@@ -46,6 +48,7 @@ All settings are managed via `config.json` in the skill root directory. Availabl
 | `region` | AWS region for Polly API calls |
 | `endpoint_url` | Custom Polly endpoint (e.g. gamma for voice cloning) |
 | `profile` | AWS credential profile name |
+| `debug` | Write audio and request payload to `debug/` directory (default: `false`) |
 
 Edit `config.json` directly to switch between voices or endpoints.
 

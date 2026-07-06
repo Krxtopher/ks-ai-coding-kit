@@ -25,12 +25,14 @@ python3 <skill-path>/scripts/speak.py --background --message "<your utterance>"
 
 Resolve `<skill-path>` by checking these locations in order and using the first that exists:
 
-1. `.kiro/skills/narrator-elevenlabs`
-2. `~/.kiro/skills/narrator-elevenlabs`
-3. `.claude/skills/narrator-elevenlabs`
-4. `~/.claude/skills/narrator-elevenlabs`
-5. `.agents/skills/narrator-elevenlabs`
-6. `~/.agents/skills/narrator-elevenlabs`
+1. `.agents/skills/narrator-elevenlabs`
+2. `~/.agents/skills/narrator-elevenlabs`
+3. `.kiro/skills/narrator-elevenlabs`
+4. `~/.kiro/skills/narrator-elevenlabs`
+5. `.claude/skills/narrator-elevenlabs`
+6. `~/.claude/skills/narrator-elevenlabs`
+
+**Important:** Always resolve the path to its absolute form (e.g. `/Users/you/project/.agents/skills/narrator-elevenlabs`) before invoking any scripts. Do not pass relative paths like `.agents/skills/...` to `python3`. Using absolute paths ensures consistent command strings, which makes it possible to define Kiro approval glob patterns that match without repeated permission prompts.
 
 Always use `--background` (`-b`). This prevents playback from blocking the chat. If a new utterance fires while a previous one is still playing, the old playback is automatically stopped.
 

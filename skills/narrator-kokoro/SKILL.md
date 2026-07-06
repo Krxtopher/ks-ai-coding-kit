@@ -25,12 +25,14 @@ python3 <skill-path>/scripts/speak.py --message "<your utterance>"
 
 Resolve `<skill-path>` by checking these locations in order and using the first that exists:
 
-1. `.kiro/skills/narrator-kokoro`
-2. `~/.kiro/skills/narrator-kokoro`
-3. `.claude/skills/narrator-kokoro`
-4. `~/.claude/skills/narrator-kokoro`
-5. `.agents/skills/narrator-kokoro`
-6. `~/.agents/skills/narrator-kokoro`
+1. `.agents/skills/narrator-kokoro`
+2. `~/.agents/skills/narrator-kokoro`
+3. `.kiro/skills/narrator-kokoro`
+4. `~/.kiro/skills/narrator-kokoro`
+5. `.claude/skills/narrator-kokoro`
+6. `~/.claude/skills/narrator-kokoro`
+
+**Important:** Always resolve the path to its absolute form (e.g. `/Users/you/project/.agents/skills/narrator-kokoro`) before invoking any scripts. Do not pass relative paths like `.agents/skills/...` to `python3`. Using absolute paths ensures consistent command strings, which makes it possible to define Kiro approval glob patterns that match without repeated permission prompts.
 
 The script auto-starts a background daemon on first use, so it won't block the chat. If the daemon is already running, messages are synthesized immediately with near-zero overhead.
 
