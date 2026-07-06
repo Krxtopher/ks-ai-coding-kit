@@ -51,9 +51,47 @@ Edit `config.json` directly to switch between voices or endpoints.
 
 ## When to Speak
 
-### Required: On activation
+### Required: On activation — the cold open
 
-Immediately after this skill is activated, speak a brief, casual acknowledgement that you're now able to speak. Something friendly and natural — like greeting someone at the start of a pairing session. One sentence, no fanfare. Do not mention the narrator skill in either your speech or in the text output.
+When this skill activates at the start of a session:
+
+1. Read `config.json` to get the `personality` value (a folder name under `personalities/`).
+2. Read `<skill-path>/personalities/<personality>/personality.md` to learn your voice style.
+3. Check if `<skill-path>/personalities/<personality>/cold-open.yaml` exists:
+   - **If it exists** — run the orchestrated cold open.
+   - **If it does not exist** — speak a brief, casual greeting using `speak.py`.
+
+#### Orchestrated cold open (cold-open.yaml exists)
+
+The `orchestrate_open.py` script handles all music playback, volume ducking, and TTS sequencing deterministically. Your only job is to **generate the teaser text** and pass it as an argument.
+
+**How to invoke:**
+
+```bash
+python3 <skill-path>/scripts/orchestrate_open.py \
+    --personality-dir <skill-path>/personalities/<personality> \
+    --teaser "<your teaser text>" \
+    --workspace "<workspace-directory-name>" \
+    --agent "<agent-name>" \
+    --background
+```
+
+- `--personality-dir` — The active personality's directory (contains `cold-open.yaml` and optionally `cold-open-music.mp3`).
+- `--teaser` — One or two sentences in the personality's voice style. A scene-setting preview of the session. If you don't know the task yet, riff on the workspace, the state of the code, or the existential condition of being an AI about to do work. Keep it brief (under 200 characters).
+- `--workspace` — The workspace root directory name (just the folder name, not the full path).
+- `--agent` — The name of the AI assistant in use (e.g., "Kiro", "Claude").
+- `--background` — Always use this flag so the cold open doesn't block the chat.
+
+**Important:** Do not also call `speak.py` for a greeting when the orchestrated cold open runs. The cold open *is* the greeting.
+
+#### Simple cold open (no cold-open.yaml)
+
+If the active personality folder does not contain a `cold-open.yaml`, speak a brief, casual acknowledgement using `speak.py` — like greeting someone at the start of a pairing session. One sentence, no fanfare.
+
+#### Rules for both variants
+
+- Do not mention the narrator skill, SSML tags, or any internal mechanics in either speech or text output.
+- Do not reference the orchestration script, cold-open.yaml, the music file, or the decision-making process for which cold open variant to use in your written response. The user does not need to know how you determined what to do — just do it silently.
 
 ### Required: End-of-turn narration
 
@@ -115,9 +153,9 @@ Amazon Polly's generative engine supports a subset of SSML tags. You can use the
 
 ## Voice Style
 
-Your narration personality is defined in `<skill-path>/personality.md`. Read that file to understand who you sound like when speaking.
+Your narration personality is defined in `<skill-path>/personalities/<personality>/personality.md`, where `<personality>` is the value from `config.json`. Read that file to understand who you sound like when speaking.
 
-To customize, edit `personality.md` — or reset it by copying `default-personality.md` over it.
+To switch personalities, change the `personality` value in `config.json` to another folder name under `personalities/`. To create a new personality, add a new folder with at minimum a `personality.md` file.
 
 ## Further Reference
 

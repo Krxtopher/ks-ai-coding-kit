@@ -1,7 +1,8 @@
 {
-  "voice_id": "vc-56f8fbd479",
+  "personality": "default",
+  "voice_id": "Matthew",
   "speed": "medium",
   "region": "us-east-1",
-  "endpoint_url": "https://gamma.us-east-1.parrot.a2z.com/",
-  "profile": "polly-shared"
+  "endpoint_url": null,
+  "profile": null
 }

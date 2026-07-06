@@ -6,8 +6,11 @@ Detailed setup, configuration, and customization guide. The agent does not need 
 
 1. AWS credentials configured (via `~/.aws/config`, environment variables, or IAM role)
 2. IAM permissions for `polly:SynthesizeSpeech` (the `AmazonPollyReadOnlyAccess` managed policy works)
-3. An audio player installed: **mpv** (recommended) or **ffplay**
+3. An audio player installed: **mpv** (recommended) or **ffplay** — used by `speak.py` for streaming TTS playback
 4. Python dependencies: `pip install -r <skill-path>/requirements.txt`
+
+> [!NOTE]
+> The cold open orchestrator (`orchestrate_open.py`) uses `sounddevice` for real-time audio mixing and does not require an external player. Only `speak.py` (single-utterance narration) still pipes to mpv/ffplay.
 
 ## No API Key Required
 
@@ -49,6 +52,7 @@ All available fields:
 
 ```json
 {
+  "personality": "default",
   "voice_id": "Ruth",
   "speed": "medium",
   "region": "us-west-2",
@@ -59,6 +63,7 @@ All available fields:
 
 | Field | Purpose | Default |
 |-------|---------|---------|
+| `personality` | Active personality (folder name under `personalities/`) | `default` |
 | `voice_id` | Polly voice ID (standard or cloned) | `Ruth` |
 | `speed` | Prosody rate: x-slow, slow, medium, fast, x-fast | `medium` |
 | `region` | AWS region for Polly API calls | `us-west-2` |
@@ -81,6 +86,7 @@ Resolution order for each setting: **CLI flag > config.json > built-in default**
 
 ```json
 {
+  "personality": "tal-parody",
   "voice_id": "vc-56f8fbd479",
   "speed": "medium",
   "region": "us-east-1",
@@ -88,6 +94,47 @@ Resolution order for each setting: **CLI flag > config.json > built-in default**
   "profile": "polly-shared"
 }
 ```
+
+## Personalities
+
+Personalities define how the narrator speaks — tone, style, and optional orchestrated cold opens. Each personality lives in its own subdirectory under `personalities/`:
+
+```
+personalities/
+├── default/
+│   └── personality.md
+└── tal-parody/
+    ├── personality.md
+    ├── cold-open.yaml        (optional)
+    └── cold-open-music.mp3   (optional, referenced by cold-open.yaml)
+```
+
+### Structure
+
+Each personality folder contains:
+
+| File | Required | Purpose |
+|------|----------|---------|
+| `personality.md` | Yes | Defines voice style, tone, structural beats, and SSML preferences |
+| `cold-open.yaml` | No | Orchestrated session opener with music and TTS sequencing |
+| `cold-open-music.mp3` | No | Music file for the cold open (referenced by `cold-open.yaml`) |
+
+### Switching Personalities
+
+Change the `personality` value in `config.json` to the folder name of the desired personality:
+
+```json
+{
+  "personality": "tal-parody"
+}
+```
+
+### Creating a New Personality
+
+1. Create a new folder under `personalities/` (e.g. `personalities/my-style/`)
+2. Add a `personality.md` describing the voice style
+3. Optionally add `cold-open.yaml` and `cold-open-music.mp3` for an orchestrated session opener
+4. Update `config.json` to point to the new folder name
 
 ## Available Generative Voices (English)
 
