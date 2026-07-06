@@ -1,8 +1,9 @@
 {
   "personality": "default",
-  "voice_id": "Matthew",
+  "voice_id": "Aria",
   "speed": "medium",
   "region": "us-east-1",
   "endpoint_url": null,
-  "profile": null
+  "profile": null,
+  "debug": false
 }

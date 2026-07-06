@@ -42,6 +42,9 @@ python3 scripts/speak.py -b --message "Hello" --voice "Stephen" --speed fast --s
 
 # Show saved configuration
 python3 scripts/speak.py --show-config
+
+# Debug mode: write audio and request payload to debug/ directory
+python3 scripts/speak.py --debug --message "Test utterance"
 ```
 
 ## Configuration
@@ -57,7 +60,8 @@ All available fields:
   "speed": "medium",
   "region": "us-west-2",
   "endpoint_url": null,
-  "profile": null
+  "profile": null,
+  "debug": false
 }
 ```
 
@@ -69,6 +73,7 @@ All available fields:
 | `region` | AWS region for Polly API calls | `us-west-2` |
 | `endpoint_url` | Custom Polly endpoint (e.g. gamma for voice cloning) | Standard endpoint |
 | `profile` | AWS credential profile name | Default profile |
+| `debug` | Write audio and request payload to `debug/` directory | `false` |
 
 Resolution order for each setting: **CLI flag > config.json > built-in default**.
 

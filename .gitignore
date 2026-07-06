@@ -26,6 +26,10 @@ skills-lock.json
 # Runtime PID files (narrator skills)
 .narrator.pid
 
+# Debug output (narrator --debug artifacts)
+**/debug/*.ogg
+**/debug/*.json
+
 # Python
 __pycache__/
 *.pyc

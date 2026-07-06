@@ -24,6 +24,7 @@ import os
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import boto3
@@ -160,6 +161,31 @@ def wrap_ssml(text: str, speed: str) -> tuple[str, str]:
 # ─── Amazon Polly streaming ─────────────────────────────────────────────────
 
 
+def _write_debug_artifacts(
+    request_params: dict,
+    audio_data: bytes,
+    voice_id: str,
+) -> None:
+    """Write audio file and request payload JSON to the debug/ directory."""
+    debug_dir = SCRIPT_DIR.parent / "debug"
+    debug_dir.mkdir(exist_ok=True)
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    base_name = f"{timestamp}_{voice_id}"
+
+    audio_path = debug_dir / f"{base_name}.ogg"
+    payload_path = debug_dir / f"{base_name}.json"
+
+    try:
+        audio_path.write_bytes(audio_data)
+        payload_path.write_text(
+            json.dumps(request_params, indent=2, default=str) + "\n",
+            encoding="utf-8",
+        )
+    except OSError as e:
+        logger.warning("Could not write debug artifacts: %s", e)
+
+
 def stream_speech(
     message: str,
     voice_id: str,
@@ -167,6 +193,7 @@ def stream_speech(
     region: str,
     endpoint_url: str | None = None,
     profile: str | None = None,
+    debug: bool = False,
 ) -> None:
     """Stream TTS audio from Amazon Polly and pipe directly to audio player."""
     player_cmd = find_player()
@@ -194,15 +221,18 @@ def stream_speech(
         client_kwargs["endpoint_url"] = endpoint_url
     polly = session.client("polly", **client_kwargs)
 
+    # Build the request parameters
+    request_params = {
+        "Engine": ENGINE,
+        "OutputFormat": OUTPUT_FORMAT,
+        "SampleRate": SAMPLE_RATE,
+        "Text": text_content,
+        "TextType": text_type,
+        "VoiceId": voice_id,
+    }
+
     try:
-        response = polly.synthesize_speech(
-            Engine=ENGINE,
-            OutputFormat=OUTPUT_FORMAT,
-            SampleRate=SAMPLE_RATE,
-            Text=text_content,
-            TextType=text_type,
-            VoiceId=voice_id,
-        )
+        response = polly.synthesize_speech(**request_params)
     except ClientError as e:
         error_code = e.response["Error"]["Code"]
         error_msg = e.response["Error"]["Message"]
@@ -225,11 +255,15 @@ def stream_speech(
         stderr=subprocess.DEVNULL,
     )
 
+    debug_chunks: list[bytes] = [] if debug else []
+
     try:
         for chunk in audio_stream.iter_chunks(chunk_size=4096):
             if chunk:
                 player_proc.stdin.write(chunk)
                 player_proc.stdin.flush()
+                if debug:
+                    debug_chunks.append(chunk)
     except BrokenPipeError:
         # Player exited early — not critical
         pass
@@ -241,6 +275,10 @@ def stream_speech(
             player_proc.stdin.close()
         player_proc.wait()
         audio_stream.close()
+
+    # Write debug artifacts after playback completes
+    if debug and debug_chunks:
+        _write_debug_artifacts(request_params, b"".join(debug_chunks), voice_id)
 
 
 # ─── CLI ─────────────────────────────────────────────────────────────────────
@@ -282,6 +320,11 @@ def main() -> None:
         action="store_true",
         help="Print the current saved configuration and exit",
     )
+    parser.add_argument(
+        "--debug", "-d",
+        action="store_true",
+        help="Write audio file and request payload to debug/ directory for inspection",
+    )
     args = parser.parse_args()
 
     # ── Show config ──────────────────────────────────────────────────────
@@ -302,6 +345,7 @@ def main() -> None:
     region = args.region or config.get("region", DEFAULT_REGION)
     endpoint_url = config.get("endpoint_url")
     profile = config.get("profile")
+    debug = args.debug or config.get("debug", False)
 
     # ── Save config if requested ─────────────────────────────────────────
     if args.save:
@@ -355,6 +399,7 @@ def main() -> None:
             region=region,
             endpoint_url=endpoint_url,
             profile=profile,
+            debug=debug,
         )
         os._exit(0)
     else:
@@ -366,6 +411,7 @@ def main() -> None:
             region=region,
             endpoint_url=endpoint_url,
             profile=profile,
+            debug=debug,
         )
 
 
