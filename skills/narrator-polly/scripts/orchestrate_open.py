@@ -589,28 +589,33 @@ def main() -> None:
         # No cold open defined — silent no-op
         return
 
-    # ── Load Polly settings ──────────────────────────────────────────────
-    config = load_config()
-    polly_settings = resolve_polly_settings(config)
-
     # ── Run ──────────────────────────────────────────────────────────────
     if args.background:
-        pid = os.fork()
-        if pid > 0:
-            return
-        os.setsid()
-        try:
-            devnull = os.open(os.devnull, os.O_RDWR)
-            os.dup2(devnull, 0)
-            os.dup2(devnull, 1)
-            os.dup2(devnull, 2)
-            os.close(devnull)
-        except OSError:
-            pass
-        run_cold_open(config_path, args.teaser, args.workspace, args.agent, polly_settings)
-        os._exit(0)
-    else:
-        run_cold_open(config_path, args.teaser, args.workspace, args.agent, polly_settings)
+        # Spawn a detached child process instead of forking. os.fork() after
+        # threads are created (sounddevice, httpx/boto3) causes deadlocks on
+        # Python 3.12+ / macOS. Re-invoke the same script without --background.
+        import subprocess
+
+        cmd = [
+            sys.executable, __file__,
+            "--personality-dir", str(args.personality_dir),
+            "--teaser", args.teaser,
+            "--workspace", args.workspace,
+            "--agent", args.agent,
+        ]
+        subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        return
+
+    # ── Load Polly settings (only in foreground / child process) ─────────
+    config = load_config()
+    polly_settings = resolve_polly_settings(config)
+    run_cold_open(config_path, args.teaser, args.workspace, args.agent, polly_settings)
 
 
 if __name__ == "__main__":
