@@ -1,6 +1,8 @@
-# Catalog of available KS AI Coding Kit extensions.
-# Each entry defines an installable item with its source path,
-# description, and per-tool install targets.
+# Catalog of available KS AI Coding Kit extensions (non-skill items only).
+#
+# Skills are installed via `npx skills` and are discovered directly from
+# the skills/ directory. This catalog covers hooks and agent instructions
+# that still use install.py for placement.
 #
 # Target paths are relative to the user's project root (--dest).
 # A null target means the item is not compatible with that tool.
@@ -9,92 +11,8 @@
 #   claude-code: { file: [CLAUDE.md, AGENTS.md], mode: append }
 # The installer uses the first file that exists in the destination,
 # falling back to the last entry if none exist.
-#
-# steering-roots defines the per-tool file used for steering-inject
-# content from skills. Supports the same prioritized list syntax.
-# Defaults to AGENTS.md for any tool not listed here.
-
-steering-roots:
-  claude-code: [CLAUDE.md, AGENTS.md]
 
 items:
-  - name: agent-memory
-    type: skill
-    source: skills/agent-memory
-    description: Persistent AI memory system with project-scoped and user-scoped memory files
-    compatibility: [kiro, claude-code, codex, cursor]
-    targets:
-      kiro: .kiro/skills/agent-memory
-      claude-code: .claude/skills/agent-memory
-      codex: .agents/skills/agent-memory
-      cursor: .agents/skills/agent-memory
-
-  - name: doc-convert
-    type: skill
-    source: skills/doc-convert
-    description: Convert documents between formats using pandoc with a styled Word reference template
-    compatibility: [kiro, claude-code, codex, cursor]
-    targets:
-      kiro: .kiro/skills/doc-convert
-      claude-code: .claude/skills/doc-convert
-      codex: .agents/skills/doc-convert
-      cursor: .agents/skills/doc-convert
-
-  - name: current-time
-    type: skill
-    source: skills/current-time
-    description: Looks up the current date and time in both local time and UTC, accurate to the second
-    compatibility: [kiro, claude-code, codex, cursor]
-    targets:
-      kiro: .kiro/skills/current-time
-      claude-code: .claude/skills/current-time
-      codex: .agents/skills/current-time
-      cursor: .agents/skills/current-time
-
-  - name: agent-skill-builder
-    type: skill
-    source: skills/agent-skill-builder
-    description: Guides you through creating new Agent Skills from scratch, with the full specification bundled for reference
-    compatibility: [kiro, claude-code, codex, cursor]
-    targets:
-      kiro: .kiro/skills/agent-skill-builder
-      claude-code: .claude/skills/agent-skill-builder
-      codex: .agents/skills/agent-skill-builder
-      cursor: .agents/skills/agent-skill-builder
-
-  - name: bedrock-vision
-    type: skill
-    source: skills/bedrock-vision
-    description: Analyze images from the workspace using Bedrock vision models and extract technical metadata
-    compatibility: [kiro, claude-code, codex, cursor]
-    targets:
-      kiro: .kiro/skills/bedrock-vision
-      claude-code: .claude/skills/bedrock-vision
-      codex: .agents/skills/bedrock-vision
-      cursor: .agents/skills/bedrock-vision
-
-  - name: tutorial-jupyter-notebook
-    type: skill
-    source: skills/tutorial-jupyter-notebook
-    description: Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts
-    compatibility: [kiro, claude-code, codex, cursor]
-    targets:
-      kiro: .kiro/skills/tutorial-jupyter-notebook
-      claude-code: .claude/skills/tutorial-jupyter-notebook
-      codex: .agents/skills/tutorial-jupyter-notebook
-      cursor: .agents/skills/tutorial-jupyter-notebook
-
-  - name: git-guardian
-    type: skill
-    source: skills/git-guardian
-    description: Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing
-    compatibility: [kiro, claude-code, codex, cursor]
-    targets:
-      kiro: .kiro/skills/git-guardian
-      claude-code: .claude/skills/git-guardian
-      codex: .agents/skills/git-guardian
-      cursor: .agents/skills/git-guardian
-
   - name: shell-command-explainer
     type: hook
     source: hooks/shell-command-explainer.kiro.hook
@@ -102,50 +20,6 @@ items:
     compatibility: [kiro]
     targets:
       kiro: .kiro/hooks/shell-command-explainer.kiro.hook
-
-  - name: narrator-kokoro
-    type: skill
-    source: skills/narrator-kokoro
-    description: Text-to-speech narrator using Kokoro (local ONNX model) — fast, fully offline speech synthesis with zero API keys or cloud dependencies
-    compatibility: [kiro, claude-code, codex, cursor]
-    targets:
-      kiro: .kiro/skills/narrator-kokoro
-      claude-code: .claude/skills/narrator-kokoro
-      codex: .agents/skills/narrator-kokoro
-      cursor: .agents/skills/narrator-kokoro
-
-  - name: narrator-elevenlabs
-    type: skill
-    source: skills/narrator-elevenlabs
-    description: Text-to-speech narrator using ElevenLabs streaming API — high-quality cloud voices with low-latency playback
-    compatibility: [kiro, claude-code, codex, cursor]
-    targets:
-      kiro: .kiro/skills/narrator-elevenlabs
-      claude-code: .claude/skills/narrator-elevenlabs
-      codex: .agents/skills/narrator-elevenlabs
-      cursor: .agents/skills/narrator-elevenlabs
-
-  - name: narrator-polly
-    type: skill
-    source: skills/narrator-polly
-    description: Text-to-speech narrator using Amazon Polly generative engine — zero API key setup, uses AWS credentials, low-latency streaming playback
-    compatibility: [kiro, claude-code, codex, cursor]
-    targets:
-      kiro: .kiro/skills/narrator-polly
-      claude-code: .claude/skills/narrator-polly
-      codex: .agents/skills/narrator-polly
-      cursor: .agents/skills/narrator-polly
-
-  - name: mermaid-diagram
-    type: skill
-    source: skills/mermaid-diagram
-    description: Generates static PNG images from Mermaid diagram definitions using the local Mermaid CLI
-    compatibility: [kiro, claude-code, codex, cursor]
-    targets:
-      kiro: .kiro/skills/mermaid-diagram
-      claude-code: .claude/skills/mermaid-diagram
-      codex: .agents/skills/mermaid-diagram
-      cursor: .agents/skills/mermaid-diagram
 
   - name: documentation-standards
     type: instruction
