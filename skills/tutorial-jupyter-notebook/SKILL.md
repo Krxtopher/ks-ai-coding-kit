@@ -13,16 +13,77 @@ metadata:
 
 # Tutorial Notebook Skill
 
-This skill guides the creation of educational Jupyter Notebooks that are readable,
-reproducible, and pedagogically effective. It synthesizes best practices from the
-academic literature on computational notebooks in education.
+This skill guides the creation of educational Jupyter Notebooks that are readable, reproducible, and pedagogically effective. It synthesizes best practices from the academic literature on computational notebooks in education.
+
+## Implementation: Building Notebook Files
+
+Jupyter notebooks (`.ipynb`) are JSON files where every line of code is a string element in an array, with explicit `\n` terminators. Writing this format directly via file-write tools is fragile — large notebooks will exceed output limits, and the escaping requirements make hand-authoring error-prone.
+
+**Always use a builder script** to generate notebooks:
+
+```python
+"""Build a tutorial notebook."""
+import json
+from pathlib import Path
+
+cells = []
+
+def md(source):
+    """Add a markdown cell."""
+    cells.append({
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": [line + "\n" for line in source.split("\n")]
+    })
+
+def code(source):
+    """Add a code cell."""
+    cells.append({
+        "cell_type": "code",
+        "metadata": {},
+        "outputs": [],
+        "execution_count": None,
+        "source": [line + "\n" for line in source.split("\n")]
+    })
+
+# --- Build cells using plain multi-line strings ---
+md("""# My Tutorial
+This is much easier to write than raw notebook JSON.""")
+
+code("""import boto3
+client = boto3.client("s3")""")
+
+# --- Finalize ---
+# Strip trailing newline from last line of each cell
+for cell in cells:
+    if cell["source"]:
+        cell["source"][-1] = cell["source"][-1].rstrip("\n")
+
+notebook = {
+    "nbformat": 4,
+    "nbformat_minor": 5,
+    "metadata": {
+        "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
+        "language_info": {"name": "python", "version": "3.10.0"}
+    },
+    "cells": cells,
+}
+
+Path("my-tutorial.ipynb").write_text(json.dumps(notebook, indent=1))
+```
+
+Benefits of the builder script approach:
+- Write cell content as normal multi-line Python strings (no manual `\n` escaping)
+- No size limits — the script handles serialization regardless of notebook length
+- Easy to reorganize cells by moving function calls
+- Subsequent edits can be made with small targeted patch scripts
+- The builder script itself is a disposable artifact (prefix with `_`, delete after use)
+
+For small modifications to an existing notebook (reordering cells, replacing content), write a short patch script that loads the JSON, modifies the cells list, and writes it back. This is safer than editing notebook JSON by hand.
 
 ## Core Philosophy
 
-A tutorial notebook is not a script with comments — it is a **narrative document**
-that happens to contain executable code. The reader should be able to understand the
-content by reading it top-to-bottom, even without executing cells. The code cells
-serve as concrete demonstrations woven into that narrative.
+A tutorial notebook is not a script with comments — it is a **narrative document** that happens to contain executable code. The reader should be able to understand the content by reading it top-to-bottom, even without executing cells. The code cells serve as concrete demonstrations woven into that narrative.
 
 The guiding principle: **explain first, show second, interpret third.**
 
@@ -80,11 +141,7 @@ For multi-notebook tutorials, use a numbered naming convention:
 
 ### One Learning Outcome Per Notebook
 
-Each notebook should answer one question or teach one workflow. If a tutorial has
-distinct phases with different patterns (e.g., resource creation vs. resource usage),
-separate them into individual notebooks that cross-reference each other. A notebook
-titled "Voice Cloning" should not also teach streaming synthesis — that's a different
-lesson with a different structure.
+Each notebook should answer one question or teach one workflow. If a tutorial has distinct phases with different patterns (e.g., resource creation vs. resource usage), separate them into individual notebooks that cross-reference each other. A notebook titled "Voice Cloning" should not also teach streaming synthesis — that's a different lesson with a different structure.
 
 ---
 
@@ -116,26 +173,19 @@ Target a **3:1 ratio** of markdown text to code. Every code cell should be:
 
 ### Code Cells
 
-- **One logical operation per cell.** If you're tempted to add a comment saying
-  "Now we do X" in the middle of a cell, that's a sign to split.
-- **A cell should represent one meaningful action.** If an import is only used by
-  the immediately following line, combine them. An `import` cell followed by a
-  one-liner call is ceremony — merge them into a single logical step.
+- **One logical operation per cell.** If you're tempted to add a comment saying "Now we do X" in the middle of a cell, that's a sign to split.
+- **A cell should represent one meaningful action.** If an import is only used by the immediately following line, combine them. An `import` cell followed by a one-liner call is ceremony — merge them into a single logical step.
 - **Keep cells under 15 lines.** Extract longer logic into functions.
 - **Name variables for clarity over brevity.** `training_data_path` not `tdp`.
 - **Use f-strings** to present computed values with context and units.
-- **Include inline comments** only for non-obvious operations. The surrounding
-  markdown carries the main narrative.
+- **Include inline comments** only for non-obvious operations. The surrounding markdown carries the main narrative.
 - **Format code consistently** (Black style: 88 char line width).
 - **Avoid magic numbers.** Define constants in a configuration cell at the top.
-- **Show output.** Save notebooks with cell outputs rendered so readers can follow
-  along without executing.
+- **Show output.** Save notebooks with cell outputs rendered so readers can follow along without executing.
 
 ### Interpreting Results
 
-Never leave a code cell's output uninterpreted. After any cell that produces
-meaningful output (a number, a DataFrame, a plot, an API response), add a markdown
-cell that:
+Never leave a code cell's output uninterpreted. After any cell that produces meaningful output (a number, a DataFrame, a plot, an API response), add a markdown cell that:
 1. States what the output means in plain language
 2. Highlights anything notable or unexpected
 3. Connects it to the next step
@@ -150,9 +200,7 @@ Good:
 ```python
 print(f"Model accuracy on held-out test set: {metrics['accuracy']:.1%}")
 ```
-Followed by a markdown cell: "An accuracy of 84.7% on the held-out test set exceeds
-our 80% target. This suggests the model generalizes well beyond the training
-distribution."
+Followed by a markdown cell: "An accuracy of 84.7% on the held-out test set exceeds our 80% target. This suggests the model generalizes well beyond the training distribution."
 
 ---
 
@@ -160,9 +208,7 @@ distribution."
 
 ### Companion Modules
 
-Tuck helper functions, utility code, and boilerplate into companion `.py` files
-that live alongside the notebook. The notebook's code should focus on the pedagogical
-flow — not on utility plumbing.
+Tuck helper functions, utility code, and boilerplate into companion `.py` files that live alongside the notebook. The notebook's code should focus on the pedagogical flow — not on utility plumbing.
 
 ```
 my-tutorial/
@@ -177,13 +223,11 @@ In the notebook:
 from helpers import format_results, upload_to_s3
 ```
 
-This keeps the notebook focused while still providing the reader access to the
-full implementation if they want to inspect the helper module.
+This keeps the notebook focused while still providing the reader access to the full implementation if they want to inspect the helper module.
 
 ### When NOT to Extract
 
-Keep code inline when it IS the lesson — when seeing the implementation is the point.
-Only extract code that's incidental to the tutorial's learning objectives.
+Keep code inline when it IS the lesson — when seeing the implementation is the point. Only extract code that's incidental to the tutorial's learning objectives.
 
 ---
 
@@ -191,31 +235,19 @@ Only extract code that's incidental to the tutorial's learning objectives.
 
 These are non-negotiable for any tutorial notebook:
 
-1. **"Restart and Run All" must succeed.** Test this before sharing. If cells
-   depend on execution-order tricks or manual intervention, the notebook is broken.
+1. **"Restart and Run All" must succeed.** Test this before sharing. If cells depend on execution-order tricks or manual intervention, the notebook is broken.
 
-2. **Pin dependencies.** Provide a `requirements.txt` or `environment.yml` with
-   exact versions alongside the notebook.
+2. **Pin dependencies.** Provide a `requirements.txt` or `environment.yml` with exact versions alongside the notebook.
 
-3. **Use relative paths.** Never hardcode absolute paths. Use `pathlib.Path` and
-   keep data files in a predictable relative location.
+3. **Use relative paths.** Never hardcode absolute paths. Use `pathlib.Path` and keep data files in a predictable relative location.
 
-4. **Document data provenance.** If the notebook uses data, explain where it comes
-   from, how to obtain it, and what date/version was used. Prefer download scripts
-   over bundling large files.
+4. **Document data provenance.** If the notebook uses data, explain where it comes from, how to obtain it, and what date/version was used. Prefer download scripts over bundling large files.
 
-5. **Declare all prerequisites upfront.** If the notebook requires AWS credentials,
-   a specific Python version, or a running service — say so in the first cell.
+5. **Declare all prerequisites upfront.** If the notebook requires AWS credentials, a specific Python version, or a running service — say so in the first cell.
 
-6. **Idempotent operations.** Where possible, design cells so running them twice
-   doesn't cause errors or duplicate resources. Where not possible, warn the reader.
+6. **Idempotent operations.** Where possible, design cells so running them twice doesn't cause errors or duplicate resources. Where not possible, warn the reader.
 
-7. **Persist resource identifiers.** If the notebook creates a resource that takes
-   time to become ready (training a model, provisioning infrastructure, waiting for
-   propagation), save the resource ID to a local file (e.g., JSONL registry). This
-   lets the user close the notebook, come back later, and resume from where they
-   left off without re-running everything. Use append-mode so multiple runs
-   accumulate rather than overwrite.
+7. **Persist resource identifiers.** If the notebook creates a resource that takes time to become ready (training a model, provisioning infrastructure, waiting for propagation), save the resource ID to a local file (e.g., JSONL registry). This lets the user close the notebook, come back later, and resume from where they left off without re-running everything. Use append-mode so multiple runs accumulate rather than overwrite.
 
 ---
 
@@ -223,10 +255,8 @@ These are non-negotiable for any tutorial notebook:
 
 ### Diagrams and Visuals
 
-- Include an **architecture diagram** or **workflow visual** early in the notebook
-  to orient readers before diving into code. Even a simple ASCII diagram helps.
-- Use **matplotlib/seaborn** for data visualizations with clear titles, axis labels,
-  and legends.
+- Include an **architecture diagram** or **workflow visual** early in the notebook to orient readers before diving into code. Even a simple ASCII diagram helps.
+- Use **matplotlib/seaborn** for data visualizations with clear titles, axis labels, and legends.
 - Keep DataFrame displays to `.head()` or `.sample(5)` — never dump hundreds of rows.
 
 ### Callout Patterns
@@ -257,22 +287,17 @@ Choose the pattern that fits your tutorial's goal:
 | **Top-down sequence** | Show what a tool does before explaining how it works |
 | **The API is the lesson** | Learning the SDK interface IS the objective |
 
-For AWS workflow tutorials, **Shift-Enter walkthrough** combined with
-**Tweak-and-explore** (exposing key parameters in a config cell) works best.
+For AWS workflow tutorials, **Shift-Enter walkthrough** combined with **Tweak-and-explore** (exposing key parameters in a config cell) works best.
 
 ---
 
 ## Teaching SDK & API Workflows
 
-When the notebook's primary goal is teaching someone to program against an API or SDK,
-these additional principles apply:
+When the notebook's primary goal is teaching someone to program against an API or SDK, these additional principles apply:
 
 ### Show the actual API call, not a wrapper
 
-Don't wrap single SDK calls in helper functions. The raw call IS the content.
-A `create_voice(...)` wrapper around `polly.create_voice(...)` puts a wall between
-the reader and the thing they're trying to learn. Only abstract when you're hiding
-genuine complexity — retries, pagination, multi-step orchestration, or error recovery.
+Don't wrap single SDK calls in helper functions. The raw call IS the content. A `create_voice(...)` wrapper around `polly.create_voice(...)` puts a wall between the reader and the thing they're trying to learn. Only abstract when you're hiding genuine complexity — retries, pagination, multi-step orchestration, or error recovery.
 
 Bad:
 ```python
@@ -298,19 +323,13 @@ print(json.dumps(response, indent=2, default=str))
 
 ### Print raw API responses
 
-When teaching people to program against a service, they need to learn the response
-shape. Pretty-print the actual JSON response with `json.dumps(response, indent=2, default=str)`
-rather than extracting individual fields into formatted strings. The structure itself
-is educational — readers learn what fields exist, what types they are, and how the
-API represents its domain model.
+When teaching people to program against a service, they need to learn the response shape. Pretty-print the actual JSON response with `json.dumps(response, indent=2, default=str)` rather than extracting individual fields into formatted strings. The structure itself is educational — readers learn what fields exist, what types they are, and how the API represents its domain model.
 
-Exception: streaming responses (like audio or file content) can't be printed directly.
-In that case, print the response metadata and note what the stream contains.
+Exception: streaming responses (like audio or file content) can't be printed directly. In that case, print the response metadata and note what the stream contains.
 
 ### Distinguish plumbing from pedagogy
 
-Ask: "Is understanding this code part of the learning objective?" If no, extract it
-to a companion module. If yes, keep it inline.
+Ask: "Is understanding this code part of the learning objective?" If no, extract it to a companion module. If yes, keep it inline.
 
 Examples of **plumbing** (extract):
 - Permission/credential validation
@@ -325,9 +344,7 @@ Examples of **pedagogy** (keep inline):
 
 ### Surface all API parameters as configuration
 
-If the API requires a parameter, give it a named configuration variable — even if the
-default value is obvious or reuses another variable. This makes the API's contract
-visible to the reader and sets the right mental model.
+If the API requires a parameter, give it a named configuration variable — even if the default value is obvious or reuses another variable. This makes the API's contract visible to the reader and sets the right mental model.
 
 Bad:
 ```python
@@ -350,10 +367,7 @@ polly.create_voice(
 
 ### Name config variables for the domain, not the format
 
-Use names that describe what the value represents in the service's domain model,
-not its technical format. `VOICE_SAMPLE_FILE` over `AUDIO_FILE`. `TRAINING_DATASET_PATH`
-over `CSV_FILE`. The reader should understand the variable's role without reading
-the comment.
+Use names that describe what the value represents in the service's domain model, not its technical format. `VOICE_SAMPLE_FILE` over `AUDIO_FILE`. `TRAINING_DATASET_PATH` over `CSV_FILE`. The reader should understand the variable's role without reading the comment.
 
 ---
 
@@ -361,14 +375,12 @@ the comment.
 
 When the tutorial involves AWS services:
 
-- Put all AWS configuration (region, bucket, model ID, role ARN) in a single
-  early "Configuration" cell with clear variable names
+- Put all AWS configuration (region, bucket, model ID, role ARN) in a single early "Configuration" cell with clear variable names
 - Use `boto3` sessions explicitly rather than relying on ambient defaults
 - Include IAM permission requirements in the Prerequisites section
 - Add estimated cost warnings for any billable operations
 - Show how to clean up resources at the end
-- Use `%%time` or timing wrappers for long-running API calls so readers know
-  what to expect
+- Use `%%time` or timing wrappers for long-running API calls so readers know what to expect
 
 ---
 
