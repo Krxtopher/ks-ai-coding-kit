@@ -6,25 +6,25 @@ Reusable extensions for AI coding tools — skills, hooks, and agent instruction
 
 ### Skills
 
-| Name | Description | Compatibility |
-|------|-------------|---------------|
-| [agent-memory](skills/agent-memory/SKILL.md) | Persistent memory across conversations. Supports project-scoped and user-scoped memories. | Kiro, Claude Code, Codex, Cursor |
-| [agent-skill-builder](skills/agent-skill-builder/SKILL.md) | Guides you through creating new Agent Skills, with the full spec bundled for reference. | Kiro, Claude Code, Codex, Cursor |
-| [bedrock-vision](skills/bedrock-vision/SKILL.md) | Analyze images using Bedrock vision models. Returns AI description plus technical metadata. | Kiro, Claude Code, Codex, Cursor |
-| [current-time](skills/current-time/SKILL.md) | Looks up the current date and time in local and UTC, accurate to the second | Kiro, Claude Code, Codex, Cursor |
-| [doc-convert](skills/doc-convert/SKILL.md) | Document conversion via pandoc with a styled Word template | Kiro, Claude Code, Codex, Cursor |
-| [git-guardian](skills/git-guardian/SKILL.md) | Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing | Kiro, Claude Code, Codex, Cursor |
-| [mermaid-diagram](skills/mermaid-diagram/SKILL.md) | Generates static PNG images from Mermaid diagram definitions using the local Mermaid CLI | Kiro, Claude Code, Codex, Cursor |
-| [narrator-kokoro](skills/narrator-kokoro/SKILL.md) | Text-to-speech narrator using Kokoro (local ONNX model) — fast, fully offline speech synthesis with zero API keys or cloud dependencies | Kiro, Claude Code, Codex, Cursor |
-| [narrator-elevenlabs](skills/narrator-elevenlabs/SKILL.md) | Text-to-speech narrator using ElevenLabs streaming API — high-quality cloud voices with low-latency playback | Kiro, Claude Code, Codex, Cursor |
-| [narrator-polly](skills/narrator-polly/SKILL.md) | Text-to-speech narrator using Amazon Polly generative engine — zero API key setup, uses AWS credentials, low-latency streaming | Kiro, Claude Code, Codex, Cursor |
-| [tutorial-jupyter-notebook](skills/tutorial-jupyter-notebook/SKILL.md) | Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts | Kiro, Claude Code, Codex, Cursor |
+| | Name | Description |
+|---|------|-------------|
+| <img src="docs/icons/brain.svg" width="31" height="31" style="min-width:31px;max-width:31px" alt="brain icon" /> | [agent-memory](skills/agent-memory/SKILL.md) | Persistent memory across conversations. Supports project-scoped and user-scoped memories. |
+| <img src="docs/icons/hammer.svg" width="31" height="31" style="min-width:31px;max-width:31px" alt="hammer icon" /> | [agent-skill-builder](skills/agent-skill-builder/SKILL.md) | Guides you through creating new Agent Skills, with the full spec bundled for reference. |
+| <img src="docs/icons/eye.svg" width="31" height="31" style="min-width:31px;max-width:31px" alt="eye icon" /> | [bedrock-vision](skills/bedrock-vision/SKILL.md) | Analyze images using Bedrock vision models. Returns AI description plus technical metadata. |
+| <img src="docs/icons/clock.svg" width="31" height="31" style="min-width:31px;max-width:31px" alt="clock icon" /> | [current-time](skills/current-time/SKILL.md) | Looks up the current date and time in local and UTC, accurate to the second |
+| <img src="docs/icons/file-text.svg" width="31" height="31" style="min-width:31px;max-width:31px" alt="file-text icon" /> | [doc-convert](skills/doc-convert/SKILL.md) | Document conversion via pandoc with a styled Word template |
+| <img src="docs/icons/shield-check.svg" width="31" height="31" style="min-width:31px;max-width:31px" alt="shield-check icon" /> | [git-guardian](skills/git-guardian/SKILL.md) | Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing |
+| <img src="docs/icons/workflow.svg" width="31" height="31" style="min-width:31px;max-width:31px" alt="workflow icon" /> | [mermaid-diagram](skills/mermaid-diagram/SKILL.md) | Generates static PNG images from Mermaid diagram definitions using the local Mermaid CLI |
+| <img src="docs/icons/audio-lines.svg" width="31" height="31" style="min-width:31px;max-width:31px" alt="audio-lines icon" /> | [narrator-kokoro](skills/narrator-kokoro/SKILL.md) | Text-to-speech narrator using Kokoro (local ONNX model) — fast, fully offline speech synthesis with zero API keys or cloud dependencies |
+| <img src="docs/icons/audio-lines.svg" width="31" height="31" style="min-width:31px;max-width:31px" alt="audio-lines icon" /> | [narrator-elevenlabs](skills/narrator-elevenlabs/SKILL.md) | Text-to-speech narrator using ElevenLabs streaming API — high-quality cloud voices with low-latency playback |
+| <img src="docs/icons/audio-lines.svg" width="31" height="31" style="min-width:31px;max-width:31px" alt="audio-lines icon" /> | [narrator-polly](skills/narrator-polly/SKILL.md) | Text-to-speech narrator using Amazon Polly generative engine — zero API key setup, uses AWS credentials, low-latency streaming |
+| <img src="docs/icons/graduation-cap.svg" width="31" height="31" style="min-width:31px;max-width:31px" alt="graduation-cap icon" /> | [tutorial-jupyter-notebook](skills/tutorial-jupyter-notebook/SKILL.md) | Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts |
 
 ### Hooks
 
-| Name | Description | Compatibility |
-|------|-------------|---------------|
-| [shell-command-explainer](hooks/shell-command-explainer.kiro.hook) | Explains shell commands before execution with safety analysis | Kiro |
+| | Name | Description | Compatibility |
+|---|------|-------------|---------------|
+| <img src="docs/icons/terminal.svg" width="31" height="31" style="min-width:31px;max-width:31px" alt="terminal icon" /> | [shell-command-explainer](hooks/shell-command-explainer.kiro.hook) | Explains shell commands before execution with safety analysis | Kiro only |
 
 ### Agent Instructions
 
@@ -102,3 +102,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide
 ## License
 
 See [LICENSE](LICENSE) for details.
+
+---
+
+Icons by [Lucide](https://lucide.dev/) — MIT licensed.
