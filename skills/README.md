@@ -23,16 +23,23 @@ description: What this skill does
 
 The rest of `SKILL.md` contains the detailed instructions the agent follows when the skill is activated.
 
-Skills with Python script dependencies should include a `requirements.txt` in their directory. The installer detects this file on install and sync, and prints a `pip install -r` command pointing at the installed copy so users know exactly what to run.
+Skills with Python script dependencies should include a `requirements.txt` in their directory. After installation, run `pip install -r` against the installed copy to set up dependencies.
 
 ## Contents
 
 | Directory | Description |
 |-----------|-------------|
 | `agent-memory/` | Persistent AI memory system with project-scoped and user-scoped memory files for retaining context across conversations |
+| `agent-skill-builder/` | Guides you through creating new Agent Skills from scratch, with the full specification bundled for reference |
+| `bedrock-vision/` | Analyze images from the workspace by extracting technical metadata and generating AI-powered descriptions via Amazon Bedrock |
 | `current-time/` | Looks up the current date and time, accurate to the second, in both local time and UTC |
 | `doc-convert/` | Convert documents between formats using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
-| `bedrock-vision/` | Analyze images from the workspace by extracting technical metadata and generating AI-powered descriptions via Amazon Bedrock |
+| `git-guardian/` | Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing |
+| `mermaid-diagram/` | Generates static PNG images from Mermaid diagram definitions using the local Mermaid CLI |
+| `narrator-kokoro/` | Text-to-speech narrator using Kokoro (local ONNX model) — fast, fully offline speech synthesis with zero API keys or cloud dependencies |
+| `narrator-elevenlabs/` | Text-to-speech narrator using ElevenLabs streaming API — high-quality cloud voices with low-latency playback |
+| `narrator-polly/` | Text-to-speech narrator using Amazon Polly generative engine — zero API key setup, uses AWS credentials, low-latency streaming playback |
+| `tutorial-jupyter-notebook/` | Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts |
 
 ## Usage Examples
 

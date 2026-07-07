@@ -14,14 +14,31 @@ Thumbs.db
 # Other personal config
 .agent-memory/
 
+# Local notes (personal, not committed)
+local-notes/
+
 # Installer manifest (local install registry, not committed)
 .install-manifest.json
+
+# Skills lock (local installed-skills state)
+skills-lock.json
+
+# Runtime PID files (narrator skills)
+.narrator.pid
+
+# Debug output (narrator --debug artifacts)
+**/debug/*.ogg
+**/debug/*.json
 
 # Python
 __pycache__/
 *.pyc
 .venv/
 *.egg-info/
+
+# Large model files (downloaded locally, not committed)
+*.onnx
+voices-*.bin
 
 # Node (if CLI is ever built in JS)
 node_modules/

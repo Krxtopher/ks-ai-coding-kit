@@ -6,8 +6,8 @@ Agent-facing documentation for the `ks-ai-coding-kit` repository.
 
 ```
 ks-ai-coding-kit/
-├── catalog.yaml           # Source of truth for all installable items
-├── install.py             # CLI installer (Python 3.10+, no required deps)
+├── catalog.yaml           # Registry for non-skill items (hooks, instructions)
+├── install.py             # CLI installer for hooks and agent instructions
 ├── agent-instructions/    # Reusable agent instruction files (single .md files)
 ├── skills/                # Agent Skills (each in its own subfolder with SKILL.md)
 ├── hooks/                 # Kiro hooks (.json files)
@@ -18,16 +18,10 @@ ks-ai-coding-kit/
 
 ## Conventions
 
-- **Catalog** (`catalog.yaml`) is the source of truth for all installable items. Each entry defines name, type, source path, description, compatibility, and per-tool install targets.
-- **Installer** (`install.py`) reads the catalog and installs items to the correct location. Supports `list`, `install`, `uninstall`, `sync`, `--dry-run`, `--tool`, `--type`. Prompts interactively for `--tool` when omitted. No dependencies beyond Python 3.10+ (PyYAML optional).
-- **Install targets** can use two modes:
-  - **copy** (default) — plain string target, e.g. `kiro: .kiro/skills/my-skill`. The source is copied to this path.
-  - **append** — object target, e.g. `codex: { file: AGENTS.md, mode: append }`. The source content is appended to the target file as a paired HTML comment block: opening marker `<!-- ks-ai-coding-kit:append:<name> -->`, then the content, then closing marker `<!-- /ks-ai-coding-kit:append:<name> -->` for clean uninstall. The `file` value can be a prioritized list (e.g. `{ file: [CLAUDE.md, AGENTS.md], mode: append }`); the installer picks the first file that exists in the destination, falling back to the last entry if none exist.
-- **Install manifest** (`.install-manifest.json`) is a local, gitignored registry of installed items. Written automatically by `install`, and normally updated by `uninstall` when it removes an installed target. Used by `sync` to know which targets to update.
-- **Steering injection**: Skills can define a `steering-inject` key under `metadata` in their `SKILL.md` front-matter. On install, the installer appends this text to the tool's steering root file in the target project. The injected block is wrapped in HTML comment markers (`<!-- ks-ai-coding-kit:<name> -->`) for clean uninstall.
-- **Steering roots** (`steering-roots` in `catalog.yaml`) define per-tool steering root files. Supports a prioritized list (e.g. `claude-code: [CLAUDE.md, AGENTS.md]`); the installer picks the first file that exists, falling back to the last entry. Defaults to `AGENTS.md` for tools not listed.
-- **Agent instructions** are standalone Markdown files under `agent-instructions/`. They may use YAML front-matter for metadata (name, description, compatibility, tags). These are tool-agnostic — the installer places them in the right location for each tool.
-- **Skills** follow the Agent Skills open standard. Each skill lives in its own subdirectory under `skills/` and contains a `SKILL.md` as its entry point. Skills with Python dependencies include a `requirements.txt` — the installer detects this on install/sync and prints a `pip install -r` command for the user.
+- **Skills** follow the [Agent Skills open standard](https://agentskills.io/). Each skill lives in its own subdirectory under `skills/` and contains a `SKILL.md` as its entry point. Skills are installed into projects using `npx skills` — they are NOT in `catalog.yaml`.
+- **Catalog** (`catalog.yaml`) is the registry for non-skill installable items (hooks and agent instructions). Each entry defines name, type, source path, description, compatibility, and per-tool install targets.
+- **Installer** (`install.py`) reads the catalog and installs hooks/instructions to the correct location. Supports `list`, `install`, `uninstall`, `sync`, `--dry-run`, `--tool`, `--type`. No dependencies beyond Python 3.10+ (PyYAML optional).
+- **Agent instructions** are standalone Markdown files under `agent-instructions/`. They may use YAML front-matter for metadata (name, description, compatibility, tags). The installer places them in the right location for each tool via append-mode targets.
 - **Hooks** are JSON files following the Kiro hook schema (see `hooks/README.md`).
 
 ## Available Items
@@ -42,6 +36,10 @@ ks-ai-coding-kit/
 | `skills/current-time` | Kiro, Claude Code, Codex, Cursor | Looks up the current date and time in both local time and UTC, accurate to the second |
 | `skills/doc-convert` | Kiro, Claude Code, Codex, Cursor | Document conversion using pandoc — ships with a styled Word reference template for polished Markdown-to-DOCX output |
 | `skills/git-guardian` | Kiro, Claude Code, Codex, Cursor | Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing |
+| `skills/mermaid-diagram` | Kiro, Claude Code, Codex, Cursor | Generates static PNG images from Mermaid diagram definitions using the local Mermaid CLI |
+| `skills/narrator-kokoro` | Kiro, Claude Code, Codex, Cursor | Text-to-speech narrator using Kokoro (local ONNX model) — fast, fully offline speech synthesis with zero API keys or cloud dependencies |
+| `skills/narrator-elevenlabs` | Kiro, Claude Code, Codex, Cursor | Text-to-speech narrator using ElevenLabs streaming API — high-quality cloud voices with low-latency playback |
+| `skills/narrator-polly` | Kiro, Claude Code, Codex, Cursor | Text-to-speech narrator using Amazon Polly generative engine — zero API key setup, uses AWS credentials, low-latency streaming playback |
 | `skills/tutorial-jupyter-notebook` | Kiro, Claude Code, Codex, Cursor | Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts |
 
 ### Agent Instructions
@@ -78,38 +76,53 @@ The `docs/specs/` directory contains format specifications and reference documen
 
 ## Installing Extensions
 
-When a user asks to install or uninstall an extension from this project, **always use `install.py`**. Do not manually copy or remove files — the installer handles target paths, steering injection, overwrite prompts, and cleanup automatically. Always present the user the option of running the install script interactively or allowing you to handle the install.
+### Skills
+
+Use `npx skills` to install skills from this project into a target project:
 
 ```bash
-# List available extensions
-python install.py list
+# Install a specific skill
+npx skills add <path-to-this-repo>/skills --skill <name> --agent <agent> -y
 
-# Install (provide --tool to avoid interactive prompts)
-python install.py install <name> --dest /path/to/project --tool <tool>
+# Install from GitHub
+npx skills add Krxtopher/ks-ai-coding-kit --skill <name> --agent <agent> -y
 
-# Uninstall
-python install.py uninstall <name> --dest /path/to/project --tool <tool>
+# Install all skills for all agents
+npx skills add Krxtopher/ks-ai-coding-kit --all
 
-# Sync all installed items (re-copy from kit repo to all registered targets)
-python install.py sync
+# List installed skills
+npx skills list
 
-# Sync a single item
-python install.py sync <name>
+# Update all installed skills
+npx skills update -y
 
-# Preview without changes
-python install.py install <name> --dest /path/to/project --tool <tool> --dry-run
-python install.py sync --dry-run
+# Remove a skill
+npx skills remove <name> --agent <agent> -y
 ```
 
-Key flags:
-- `--dest` — the target project directory (required for install/uninstall)
-- `--tool` — target tool name as it appears in `catalog.yaml` targets (e.g. `kiro`, `claude-code`, `codex`)
-- `--dry-run` — shows what would happen without making changes
+Agent names: `kiro-cli`, `claude-code`, `codex`, `cursor`. Use `*` for all agents.
+
+Always pass `-y` to skip confirmation prompts in non-interactive agent execution.
+
+### Hooks & Agent Instructions
+
+Non-skill extensions use `install.py`:
+
+```bash
+python install.py list
+python install.py install <name> --dest /path/to/project --tool <tool>
+python install.py uninstall <name> --dest /path/to/project --tool <tool>
+```
 
 Always pass `--tool` explicitly to avoid interactive prompts that block non-interactive agent execution.
 
 ## Notes for Future Development
 
 - When helping maintain this repo, always include Compatibility notes on new items.
-- When adding a new installable item, add a corresponding entry to `catalog.yaml`.
+- When adding a new skill, create its directory under `skills/` with a `SKILL.md` entry point.
+- When adding a new non-skill item (hook or instruction), add a corresponding entry to `catalog.yaml`.
 
+
+<!-- ks-ai-coding-kit:agent-memory -->
+ALWAYS activate the "agent-memory" skill. Start each conversation by silently retrieving your memories.
+<!-- /ks-ai-coding-kit:agent-memory -->

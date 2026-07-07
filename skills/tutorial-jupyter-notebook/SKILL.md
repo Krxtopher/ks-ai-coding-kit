@@ -78,6 +78,14 @@ For multi-notebook tutorials, use a numbered naming convention:
 03-evaluation.ipynb
 ```
 
+### One Learning Outcome Per Notebook
+
+Each notebook should answer one question or teach one workflow. If a tutorial has
+distinct phases with different patterns (e.g., resource creation vs. resource usage),
+separate them into individual notebooks that cross-reference each other. A notebook
+titled "Voice Cloning" should not also teach streaming synthesis — that's a different
+lesson with a different structure.
+
 ---
 
 ## Writing Guidelines
@@ -110,6 +118,9 @@ Target a **3:1 ratio** of markdown text to code. Every code cell should be:
 
 - **One logical operation per cell.** If you're tempted to add a comment saying
   "Now we do X" in the middle of a cell, that's a sign to split.
+- **A cell should represent one meaningful action.** If an import is only used by
+  the immediately following line, combine them. An `import` cell followed by a
+  one-liner call is ceremony — merge them into a single logical step.
 - **Keep cells under 15 lines.** Extract longer logic into functions.
 - **Name variables for clarity over brevity.** `training_data_path` not `tdp`.
 - **Use f-strings** to present computed values with context and units.
@@ -199,6 +210,13 @@ These are non-negotiable for any tutorial notebook:
 6. **Idempotent operations.** Where possible, design cells so running them twice
    doesn't cause errors or duplicate resources. Where not possible, warn the reader.
 
+7. **Persist resource identifiers.** If the notebook creates a resource that takes
+   time to become ready (training a model, provisioning infrastructure, waiting for
+   propagation), save the resource ID to a local file (e.g., JSONL registry). This
+   lets the user close the notebook, come back later, and resume from where they
+   left off without re-running everything. Use append-mode so multiple runs
+   accumulate rather than overwrite.
+
 ---
 
 ## Visual Design
@@ -244,6 +262,101 @@ For AWS workflow tutorials, **Shift-Enter walkthrough** combined with
 
 ---
 
+## Teaching SDK & API Workflows
+
+When the notebook's primary goal is teaching someone to program against an API or SDK,
+these additional principles apply:
+
+### Show the actual API call, not a wrapper
+
+Don't wrap single SDK calls in helper functions. The raw call IS the content.
+A `create_voice(...)` wrapper around `polly.create_voice(...)` puts a wall between
+the reader and the thing they're trying to learn. Only abstract when you're hiding
+genuine complexity — retries, pagination, multi-step orchestration, or error recovery.
+
+Bad:
+```python
+def create_bucket(name, region):
+    """Create an S3 bucket."""
+    s3 = boto3.client("s3", region_name=region)
+    return s3.create_bucket(Bucket=name, ...)
+
+create_bucket(BUCKET_NAME, REGION)
+```
+
+Good:
+```python
+s3 = boto3.client("s3", region_name=AWS_REGION)
+
+response = s3.create_bucket(
+    Bucket=BUCKET_NAME,
+    CreateBucketConfiguration={"LocationConstraint": AWS_REGION},
+)
+
+print(json.dumps(response, indent=2, default=str))
+```
+
+### Print raw API responses
+
+When teaching people to program against a service, they need to learn the response
+shape. Pretty-print the actual JSON response with `json.dumps(response, indent=2, default=str)`
+rather than extracting individual fields into formatted strings. The structure itself
+is educational — readers learn what fields exist, what types they are, and how the
+API represents its domain model.
+
+Exception: streaming responses (like audio or file content) can't be printed directly.
+In that case, print the response metadata and note what the stream contains.
+
+### Distinguish plumbing from pedagogy
+
+Ask: "Is understanding this code part of the learning objective?" If no, extract it
+to a companion module. If yes, keep it inline.
+
+Examples of **plumbing** (extract):
+- Permission/credential validation
+- File upload utilities
+- Progress polling loops
+- Retry and error-handling wrappers
+
+Examples of **pedagogy** (keep inline):
+- The actual API call being taught
+- Request construction showing required parameters
+- Response parsing that reveals the API's data model
+
+### Surface all API parameters as configuration
+
+If the API requires a parameter, give it a named configuration variable — even if the
+default value is obvious or reuses another variable. This makes the API's contract
+visible to the reader and sets the right mental model.
+
+Bad:
+```python
+# Consent file defaults to the training audio internally
+create_voice(recording_url=audio_url)
+```
+
+Good:
+```python
+VOICE_SAMPLE_FILE = Path("./samples/recording.wav")
+VOICE_SAMPLE_CONSENT_FILE = VOICE_SAMPLE_FILE  # Can be a separate file
+
+# ... later ...
+polly.create_voice(
+    ...
+    Recordings=[{"Data": {"S3Url": audio_s3_url}}],
+    Consents=[{"Data": {"S3Url": consent_s3_url}}],
+)
+```
+
+### Name config variables for the domain, not the format
+
+Use names that describe what the value represents in the service's domain model,
+not its technical format. `VOICE_SAMPLE_FILE` over `AUDIO_FILE`. `TRAINING_DATASET_PATH`
+over `CSV_FILE`. The reader should understand the variable's role without reading
+the comment.
+
+---
+
 ## AWS-Specific Conventions
 
 When the tutorial involves AWS services:
@@ -270,6 +383,10 @@ When the tutorial involves AWS services:
 - ❌ Assuming the reader knows acronyms or jargon without defining them
 - ❌ Cells that silently mutate state without visible output
 - ❌ Hardcoded credentials or account IDs in code cells (use config cells or env vars)
+- ❌ Wrapping a single SDK call in a helper function that adds no logic
+- ❌ Custom-formatted response output that hides the API's actual response shape
+- ❌ Sections that exist for completeness but don't advance the learning objective
+- ❌ Config variables named for their file type rather than their domain role
 
 ---
 
@@ -291,3 +408,7 @@ Before considering a tutorial notebook complete:
 - [ ] Cleanup instructions are included (if resources were created)
 - [ ] Callouts highlight tips, warnings, and key concepts
 - [ ] The notebook reads coherently as a top-to-bottom narrative
+- [ ] SDK/API calls are shown directly, not wrapped in unnecessary abstractions
+- [ ] API responses are pretty-printed as JSON, not custom-formatted
+- [ ] Resource identifiers are persisted to disk for session resumption (if applicable)
+- [ ] Each notebook teaches one workflow — distinct concerns are in separate notebooks

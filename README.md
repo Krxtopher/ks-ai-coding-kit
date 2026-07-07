@@ -14,6 +14,10 @@ Reusable extensions for AI coding tools — skills, hooks, and agent instruction
 | [current-time](skills/current-time/SKILL.md) | Looks up the current date and time in local and UTC, accurate to the second | Kiro, Claude Code, Codex, Cursor |
 | [doc-convert](skills/doc-convert/SKILL.md) | Document conversion via pandoc with a styled Word template | Kiro, Claude Code, Codex, Cursor |
 | [git-guardian](skills/git-guardian/SKILL.md) | Git commit and branching guardian — scans for secrets, large files, archives, and notebook output before committing | Kiro, Claude Code, Codex, Cursor |
+| [mermaid-diagram](skills/mermaid-diagram/SKILL.md) | Generates static PNG images from Mermaid diagram definitions using the local Mermaid CLI | Kiro, Claude Code, Codex, Cursor |
+| [narrator-kokoro](skills/narrator-kokoro/SKILL.md) | Text-to-speech narrator using Kokoro (local ONNX model) — fast, fully offline speech synthesis with zero API keys or cloud dependencies | Kiro, Claude Code, Codex, Cursor |
+| [narrator-elevenlabs](skills/narrator-elevenlabs/SKILL.md) | Text-to-speech narrator using ElevenLabs streaming API — high-quality cloud voices with low-latency playback | Kiro, Claude Code, Codex, Cursor |
+| [narrator-polly](skills/narrator-polly/SKILL.md) | Text-to-speech narrator using Amazon Polly generative engine — zero API key setup, uses AWS credentials, low-latency streaming | Kiro, Claude Code, Codex, Cursor |
 | [tutorial-jupyter-notebook](skills/tutorial-jupyter-notebook/SKILL.md) | Guide for creating high-quality educational Jupyter Notebooks that teach workflows, patterns, and technical concepts | Kiro, Claude Code, Codex, Cursor |
 
 ### Hooks
@@ -28,50 +32,49 @@ Reusable instruction sets — coding standards, project context, workflows — d
 
 ## Quick Start
 
-Requires Python 3.10+. No additional dependencies.
+### Installing Skills
+
+Skills are installed with [`npx skills`](https://www.npmjs.com/package/skills):
 
 ```bash
-# See what's available
+# Install a skill from GitHub (interactive — prompts for skill and agent)
+npx skills add Krxtopher/ks-ai-coding-kit
+
+# Install a specific skill for a specific agent
+npx skills add Krxtopher/ks-ai-coding-kit --skill agent-memory --agent kiro-cli -y
+
+# Install all skills for all agents
+npx skills add Krxtopher/ks-ai-coding-kit --all
+
+# Install from a local clone
+npx skills add ./skills --skill agent-memory --agent kiro-cli -y
+```
+
+Other useful commands:
+
+```bash
+npx skills list              # see what's installed
+npx skills update -y         # update all installed skills
+npx skills remove agent-memory --agent kiro-cli -y
+```
+
+Agent names: `kiro-cli`, `claude-code`, `codex`, `cursor`. Use `*` for all agents.
+
+### Installing Hooks & Agent Instructions
+
+Non-skill extensions (hooks and agent instructions) use the bundled `install.py`:
+
+```bash
 python install.py list
-
-# Install a skill into your project
-python install.py install agent-memory --dest ~/my-project
+python install.py install shell-command-explainer --dest ~/my-project --tool kiro
+python install.py uninstall shell-command-explainer --dest ~/my-project --tool kiro
 ```
-
-The installer prompts you to pick a target tool if the extension supports more than one. To skip the prompt (useful for scripting), pass `--tool` directly:
-
-```bash
-python install.py install agent-memory --dest ~/my-project --tool kiro
-```
-
-Uninstall works the same way:
-
-```bash
-python install.py uninstall agent-memory --dest ~/my-project
-```
-
-## Syncing Updates
-
-Made improvements to an extension? Push them to every workspace where it's installed:
-
-```bash
-python install.py sync          # all installed items
-python install.py sync agent-memory  # just one
-```
-
-The installer tracks destinations in a local `.install-manifest.json` (gitignored), so `sync` knows where to copy.
 
 ## How It Works
 
-The installer reads `catalog.yaml` (the source of truth for all extensions) and copies files to the right location for your chosen tool. Each extension declares its own compatibility, so you only see what works with your setup.
+**Skills** follow the open [Agent Skills](https://agentskills.io/) standard. Each skill lives in its own directory under `skills/` with a `SKILL.md` entry point. The `npx skills` CLI handles placement into the correct tool-specific path (`.kiro/skills/`, `.claude/skills/`, `.agents/skills/`) and manages a lock file for updates.
 
-A few things happen automatically:
-
-- **Steering injection** — Some skills (like `agent-memory`) need a one-liner in your project's agent-facing docs to activate at conversation start. The installer appends it on install and removes it on uninstall. For tools like Claude Code that prefer `CLAUDE.md` over `AGENTS.md`, the installer automatically picks the right file — it checks a prioritized list and uses the first one that exists in your project.
-- **Prioritized file targets** — Append-mode targets and steering injection both support a prioritized fallback list. For example, Claude Code's append target is `[CLAUDE.md, AGENTS.md]` — the installer uses `CLAUDE.md` if it exists, otherwise falls back to `AGENTS.md`.
-- **Python dependencies** — Skills that include a `requirements.txt` will trigger a notice after install or sync with the exact `pip install -r` command to run. No packages are installed automatically.
-- **Dry runs** — Add `--dry-run` to any command to preview changes without writing anything.
-- **Manual install** — You can always copy files by hand. See the target paths in `catalog.yaml` or the tool-specific docs below.
+**Hooks and agent instructions** use `install.py`, which reads `catalog.yaml` and copies files to the right location for your chosen tool.
 
 <details>
 <summary>Manual install paths by tool</summary>
@@ -94,7 +97,7 @@ New to AI coding assistants? Here's a quick glossary:
 
 ## Contributing
 
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide. Short version: add your files, create a `catalog.yaml` entry, include a Compatibility note, and open a PR.
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide. Short version: add your skill under `skills/` with a `SKILL.md`, include a Compatibility note, and open a PR. Non-skill extensions (hooks, instructions) also need a `catalog.yaml` entry.
 
 ## License
 
