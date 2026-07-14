@@ -91,8 +91,10 @@ The folder name format is: `YYYYMMDD-HHMM_<slugified-title>`
 | `--voice2` | No | `Rachel` | Co-presenter voice (name or ElevenLabs voice ID) |
 | `--voice1-name` | No | *(inferred)* | Display name for voice 1 in dialogue |
 | `--voice2-name` | No | *(inferred)* | Display name for voice 2 in dialogue |
-| `--voice1-personality` | No | `assets/voice1_personality.txt` | Personality description for voice 1 |
-| `--voice2-personality` | No | `assets/voice2_personality.txt` | Personality description for voice 2 |
+| `--voice1-personality` | No | `assets/voice1_personality.txt` | Personality description for voice 1 (inline text or path to .txt file) |
+| `--voice2-personality` | No | `assets/voice2_personality.txt` | Personality description for voice 2 (inline text or path to .txt file) |
+| `--intro-speech` | No | `assets/intro_speech.txt` | Custom intro speech (inline text or path to .txt file). Supports `{title}`, `{voice1_name}`, `{voice2_name}` placeholders. Multi-line files produce one segment per line. |
+| `--outro-speech` | No | `assets/outro_speech.txt` | Custom outro speech (inline text or path to .txt file) |
 | `--duration` | No | `2.0` | Target duration in minutes |
 | `--api-key` | No | `$ELEVENLABS_API_KEY` | ElevenLabs API key (or set env var) |
 | `--elevenlabs-model` | No | `eleven_v3` | ElevenLabs model ID |
@@ -106,6 +108,8 @@ The folder name format is: `YYYYMMDD-HHMM_<slugified-title>`
 | `--intro-music` | No | *(none)* | Path to intro/outro music MP3 |
 | `--music-volume` | No | `60` | Music volume percentage (1–100) |
 | `--verbose` | No | `false` | Enable verbose logging output |
+| `--normalize` | No | `true` | Normalize audio loudness to -14 LUFS (EBU R128 podcast standard). Enabled by default. |
+| `--no-normalize` | No | `false` | Disable audio normalization |
 
 ### `generate` only
 
@@ -127,6 +131,8 @@ The folder name format is: `YYYYMMDD-HHMM_<slugified-title>`
 | `--similarity-boost` | No | *(from config)* | Override similarity boost |
 | `--style` | No | *(from config)* | Override style |
 | `--speed` | No | *(from config)* | Override speed |
+| `--intro-speech` | No | *(from config)* | Override intro speech |
+| `--outro-speech` | No | *(from config)* | Override outro speech |
 
 ## Typical Agent Workflows
 
@@ -155,8 +161,32 @@ When preparing the content summary for the skill, follow these guidelines:
 - **Structure with headers** — Use `##` headers to separate distinct topics or themes
 - **Use bullet points** — List specific facts, changes, or insights as bullets
 - **Include context** — Add 1–2 sentences explaining what the subject matter is and why it matters
-- **Keep it focused** — 1000–3000 words is the sweet spot
-- **Name sources** — Mention where information came from so presenters can reference them
+- **Keep it focused** — 1000–3000 words is the sweet spot. Too little = shallow podcast, too much = the LLM ignores details
+- **Name sources** — Mention where information came from (article titles, document names) so the presenters can reference them naturally
+
+### Example Summary Structure
+
+```
+## Topic: [What this podcast episode covers]
+
+Background: [1-2 sentences of context for listeners unfamiliar with the topic]
+
+## Key Points
+
+- Point 1: [detail]
+- Point 2: [detail]
+- Point 3: [detail]
+
+## Interesting Details
+
+- [Supporting facts, quotes, or data]
+- [Surprising findings or counterpoints]
+
+## Implications
+
+- [What this means for the audience]
+- [What to watch for next]
+```
 
 ## Audio Tags in Scripts
 
@@ -195,22 +225,6 @@ Any ElevenLabs voice ID can be passed directly (including custom cloned voices).
 - AWS credentials with Bedrock (Claude) access for script generation
 - For Python 3.13+: install `audioop-lts` for pydub compatibility
 
-## Dependency Installation
-
-Python dependencies are listed in `requirements.txt` bundled with this skill. If running the script fails with an `ImportError` or `ModuleNotFoundError`, install the dependencies before retrying:
-
-```bash
-pip install -r <skill-path>/requirements.txt
-```
-
-If a Python virtual environment (`.venv`) exists in the project root, use it:
-
-```bash
-.venv/bin/pip install -r <skill-path>/requirements.txt
-```
-
-`<skill-path>` is the directory containing this `SKILL.md`. Always resolve it to an absolute path.
-
 ## Implementation Status
 
 The ElevenLabs synthesis module is fully implemented using the official `elevenlabs` Python SDK. Both v3 (with audio tag support) and v2/v2.5 models (tags stripped automatically) are supported.
@@ -228,4 +242,7 @@ The ElevenLabs synthesis module is fully implemented using the official `elevenl
 - Custom cloned voices (IVCs) work well with v3; PVCs are not yet fully optimized for v3
 - Target duration is approximate — actual length depends on speaking pace and turn count
 - The prompt template at `assets/prompt_template.txt` includes audio tag instructions
+- Host personalities are defined in `assets/voice1_personality.txt` and `assets/voice2_personality.txt` — edit these to change presenter behavior without touching the prompt template
+- Personalities can also be overridden per-run via `--voice1-personality` and `--voice2-personality` (accepts inline text or a path to a .txt file)
+- Intro and outro speech can be overridden per-run via `--intro-speech` and `--outro-speech` (accepts inline text or a path to a .txt file). The intro speech supports `{title}`, `{voice1_name}`, and `{voice2_name}` template variables.
 - The default Bedrock model is `us.anthropic.claude-opus-4-6-v1`; use `--bedrock-model` to override

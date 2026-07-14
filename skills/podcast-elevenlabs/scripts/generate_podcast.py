@@ -125,16 +125,17 @@ def load_script(run_dir: Path) -> list[dict]:
     return json.loads(script_path.read_text(encoding="utf-8"))
 
 
-def calculate_word_budget(duration: float, has_music: bool) -> int:
+def calculate_word_budget(duration: float, has_music: bool, outro_text: str | None = None) -> int:
     """Calculate the word budget based on target duration and music presence."""
     if has_music:
+        # Account for fixed intro/outro time
         intro_fixed_ms = (
             INTRO_MUSIC_DURATION_MS + DUCK_RAMP_MS +
             INTRO_RAMP_BACK_MS + DUCK_RAMP_MS + INTRO_FADE_OUT_MS
         )
 
-        outro_text = ""
-        if OUTRO_SPEECH_FILE.exists():
+        # Estimate outro speech duration
+        if outro_text is None and OUTRO_SPEECH_FILE.exists():
             outro_text = OUTRO_SPEECH_FILE.read_text(encoding="utf-8").strip()
         outro_speech_words = len(outro_text.split()) if outro_text else 0
         outro_speech_ms = (outro_speech_words / 155) * 60000
@@ -146,12 +147,13 @@ def calculate_word_budget(duration: float, has_music: bool) -> int:
         fixed_ms = intro_fixed_ms + outro_fixed_ms + OUTRO_PAUSE_MS
         fixed_min = fixed_ms / 60000
 
-        intro_speech_words = 25
+        intro_speech_words = 25  # Approximate words in intro speech
         fixed_words = intro_speech_words + outro_speech_words
 
         effective_duration_min = max(0.5, duration - fixed_min)
         word_budget = int(effective_duration_min * 155) - fixed_words
     else:
+        # No music — all duration goes to conversation
         word_budget = int(duration * 155)
 
     return max(100, word_budget)
@@ -160,6 +162,26 @@ def calculate_word_budget(duration: float, has_music: bool) -> int:
 def resolve_personality(value: str | None) -> str | None:
     """Resolve a personality argument: if it's a file path, read it; otherwise return as-is."""
     if value is None:
+        return None
+    path = Path(value)
+    if path.exists() and path.is_file():
+        return path.read_text(encoding="utf-8").strip()
+    return value.strip()
+
+
+def resolve_speech_text(value: str | None, default_file: Path) -> str | None:
+    """Resolve a speech argument: file path, inline text, or fall back to the default asset.
+
+    Resolution order:
+        1. If value is None, read from default_file (asset default).
+        2. If value is a path to an existing file, read its contents.
+        3. Otherwise, treat value as inline text.
+
+    Returns None if no text is available (default file missing and no override).
+    """
+    if value is None:
+        if default_file.exists():
+            return default_file.read_text(encoding="utf-8").strip()
         return None
     path = Path(value)
     if path.exists() and path.is_file():
@@ -196,6 +218,8 @@ def build_config_dict(args: argparse.Namespace, subcommand: str) -> dict:
         "voice2_name": args.voice2_name,
         "voice1_personality": resolve_personality(args.voice1_personality),
         "voice2_personality": resolve_personality(args.voice2_personality),
+        "intro_speech": resolve_speech_text(args.intro_speech, INTRO_SPEECH_FILE),
+        "outro_speech": resolve_speech_text(args.outro_speech, OUTRO_SPEECH_FILE),
         "model": args.elevenlabs_model,
         "bedrock_profile": args.profile,
         "bedrock_model": args.bedrock_model,
@@ -205,7 +229,7 @@ def build_config_dict(args: argparse.Namespace, subcommand: str) -> dict:
         "style": args.style,
         "speed": args.speed,
         "music_volume": args.music_volume,
-        "normalize": args.normalize,
+        "normalize": args.normalize and not args.no_normalize,
         "timestamp": datetime.now().isoformat(),
     }
     intro_music = None if args.no_music else args.intro_music
@@ -231,7 +255,9 @@ def run_script_generation(
     voice2_name = config.get("voice2_name") or voice2_voice["name"]
 
     has_music = bool(config.get("intro_music"))
-    word_budget = calculate_word_budget(config["duration"], has_music)
+    word_budget = calculate_word_budget(
+        config["duration"], has_music, outro_text=config.get("outro_speech")
+    )
 
     print(f"[1/1] Generating podcast script via Bedrock (~{word_budget} words)...", end=" ", flush=True)
 
@@ -320,10 +346,14 @@ def run_synthesis(
         print("[2/2] Mixing audio with intro/outro music...")
 
         # Synthesize intro speech lines via ElevenLabs
-        if INTRO_SPEECH_FILE.exists():
+        intro_speech_text = config.get("intro_speech")
+        if intro_speech_text is None and INTRO_SPEECH_FILE.exists():
+            intro_speech_text = INTRO_SPEECH_FILE.read_text(encoding="utf-8").strip()
+
+        if intro_speech_text:
             from synthesize import synthesize_segment
 
-            intro_lines = INTRO_SPEECH_FILE.read_text(encoding="utf-8").strip().splitlines()
+            intro_lines = intro_speech_text.splitlines()
             format_vars = {
                 "title": config["title"],
                 "voice1_name": voice1_name,
@@ -339,16 +369,18 @@ def run_synthesis(
                 print("OK")
 
         # Synthesize outro speech
-        if OUTRO_SPEECH_FILE.exists():
+        outro_speech_text = config.get("outro_speech")
+        if outro_speech_text is None and OUTRO_SPEECH_FILE.exists():
+            outro_speech_text = OUTRO_SPEECH_FILE.read_text(encoding="utf-8").strip()
+
+        if outro_speech_text:
             from synthesize import synthesize_segment
 
-            outro_text = OUTRO_SPEECH_FILE.read_text(encoding="utf-8").strip()
-            if outro_text:
-                print("      Synthesizing outro...", end=" ", flush=True)
-                outro_speech_bytes = synthesize_segment(
-                    api_key, voice1_voice["id"], outro_text
-                )
-                print("OK")
+            print("      Synthesizing outro...", end=" ", flush=True)
+            outro_speech_bytes = synthesize_segment(
+                api_key, voice1_voice["id"], outro_speech_text
+            )
+            print("OK")
     else:
         print("[2/2] Assembling audio (no music)...")
 
@@ -506,6 +538,24 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         help="Personality description for voice 2 (inline text or path to .txt file)",
     )
     parser.add_argument(
+        "--intro-speech",
+        default=None,
+        help=(
+            "Custom intro speech text or path to a .txt file. Supports "
+            "{title}, {voice1_name}, {voice2_name} placeholders. "
+            "Multi-line files produce one synthesized segment per line. "
+            "Default: bundled intro_speech.txt"
+        ),
+    )
+    parser.add_argument(
+        "--outro-speech",
+        default=None,
+        help=(
+            "Custom outro speech text or path to a .txt file. "
+            "Default: bundled outro_speech.txt"
+        ),
+    )
+    parser.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Enable verbose logging output",
@@ -513,7 +563,13 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--normalize",
         action="store_true",
-        help="Normalize audio loudness to -14 LUFS (EBU R128 podcast standard)",
+        default=True,
+        help="Normalize audio loudness to -14 LUFS (EBU R128 podcast standard). Enabled by default.",
+    )
+    parser.add_argument(
+        "--no-normalize",
+        action="store_true",
+        help="Disable audio normalization",
     )
 
 
@@ -587,9 +643,12 @@ def parse_args() -> argparse.Namespace:
     synth_parser.add_argument("--similarity-boost", type=float, default=None, help="Override similarity")
     synth_parser.add_argument("--style", type=float, default=None, help="Override style")
     synth_parser.add_argument("--speed", type=float, default=None, help="Override speed")
+    synth_parser.add_argument("--intro-speech", default=None, help="Override intro speech (inline text or path to .txt file)")
+    synth_parser.add_argument("--outro-speech", default=None, help="Override outro speech (inline text or path to .txt file)")
     synth_parser.add_argument("--profile", default=None, help="Override AWS profile")
     synth_parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging")
     synth_parser.add_argument("--normalize", action="store_true", help="Normalize to -14 LUFS")
+    synth_parser.add_argument("--no-normalize", action="store_true", help="Disable audio normalization")
 
     args = parser.parse_args()
 
@@ -719,10 +778,16 @@ def cmd_synthesize(args: argparse.Namespace) -> None:
         config["style"] = args.style
     if args.speed is not None:
         config["speed"] = args.speed
+    if args.intro_speech:
+        config["intro_speech"] = resolve_speech_text(args.intro_speech, INTRO_SPEECH_FILE)
+    if args.outro_speech:
+        config["outro_speech"] = resolve_speech_text(args.outro_speech, OUTRO_SPEECH_FILE)
     if args.profile:
         config["bedrock_profile"] = args.profile
     if args.normalize:
         config["normalize"] = True
+    if args.no_normalize:
+        config["normalize"] = False
 
     save_config(run_dir, config)
 

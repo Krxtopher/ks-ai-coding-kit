@@ -143,10 +143,46 @@ ElevenLabs provides fine-grained control over voice delivery:
 
 For podcast-style conversational delivery, try `--stability 0.3` to `0.5` for natural emotional range.
 
+## Customization
+
+### Host personalities
+
+Edit `assets/voice1_personality.txt` and `assets/voice2_personality.txt` to change how each presenter behaves in the conversation. These are plain-text descriptions injected into the LLM prompt.
+
+You can also override personalities per-run via CLI flags:
+
+```bash
+python scripts/generate_podcast.py generate \
+  --content-file summary.txt \
+  --voice1-personality "A skeptical journalist who challenges every claim"
+```
+
+### Prompt template
+
+Edit `assets/prompt_template.txt` to change the podcast style, tone, structure, or turn count. This template includes ElevenLabs audio tag instructions.
+
+### Intro/outro speech
+
+Edit `assets/intro_speech.txt` and `assets/outro_speech.txt` to customize the spoken intro and sign-off. The intro supports `{title}`, `{voice1_name}`, and `{voice2_name}` placeholders. Multi-line intro files produce one synthesized segment per line.
+
+You can also override per-run:
+
+```bash
+python scripts/generate_podcast.py generate \
+  --content-file summary.txt \
+  --intro-speech "Welcome to today's deep dive on {title}. I'm {voice1_name}." \
+  --outro-speech "Thanks for listening. See you next time."
+```
+
 ## Notes
 
 - ElevenLabs v3 produces highly expressive speech that responds to audio tags in the text.
+- Audio normalization (EBU R128, -14 LUFS) is enabled by default for broadcast-standard loudness. Disable with `--no-normalize`.
 - The `stability` slider is the most impactful setting — "Creative" (low) enables more emotional range.
 - Custom Instant Voice Clones (IVCs) work well with v3; Professional Voice Clones (PVCs) are still being optimized.
 - Target duration is approximate — actual length depends on speaking pace and turn count.
+- The prompt template at `assets/prompt_template.txt` can be customized to change podcast style.
+- Host personalities are defined in `assets/voice1_personality.txt` and `assets/voice2_personality.txt` — edit these to change presenter behavior without touching the prompt template.
+- Personalities can also be overridden per-run via `--voice1-personality` and `--voice2-personality` (accepts inline text or a path to a .txt file).
+- Intro and outro speech can be overridden per-run via `--intro-speech` and `--outro-speech` (accepts inline text or a path to a .txt file). The intro speech supports `{title}`, `{voice1_name}`, and `{voice2_name}` template variables.
 - The default Bedrock model is `us.anthropic.claude-opus-4-6-v1`; use `--bedrock-model` to override.
