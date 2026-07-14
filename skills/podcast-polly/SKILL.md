@@ -33,8 +33,8 @@ Runs the complete workflow: script generation, audio synthesis, and mixing. All 
 python scripts/generate_podcast.py generate \
   --content-file <path_to_summary.txt> \
   --title "Episode Title" \
-  --voice1 Tiffany \
-  --voice2 Stephen \
+  --voice1 Matthew \
+  --voice2 Danielle \
   --duration 2.0 \
   --intro-music assets/music.mp3 \
   --music-volume 60 \
@@ -87,12 +87,14 @@ The folder name format is: `YYYYMMDD-HHMM_<slugified-title>`
 | `--content` | One of content/content-file | — | Inline content summary text |
 | `--content-file` | One of content/content-file | — | Path to a text file with the content summary |
 | `--title` | No | "Podcast" | Episode title (used in intro speech and folder name) |
-| `--voice1` | No | `Tiffany` | Lead presenter voice (name or Polly voice ID) |
-| `--voice2` | No | `Stephen` | Co-presenter voice (name or Polly voice ID) |
+| `--voice1` | No | `Matthew` | Lead presenter voice (name or Polly voice ID) |
+| `--voice2` | No | `Danielle` | Co-presenter voice (name or Polly voice ID) |
 | `--voice1-name` | No | *(inferred)* | Display name for voice 1 in dialogue |
 | `--voice2-name` | No | *(inferred)* | Display name for voice 2 in dialogue |
 | `--voice1-personality` | No | `assets/voice1_personality.txt` | Personality description for voice 1 (inline text or path to .txt file) |
 | `--voice2-personality` | No | `assets/voice2_personality.txt` | Personality description for voice 2 (inline text or path to .txt file) |
+| `--intro-speech` | No | `assets/intro_speech.txt` | Custom intro speech (inline text or path to .txt file). Supports `{title}`, `{voice1_name}`, `{voice2_name}` placeholders. Multi-line files produce one segment per line. |
+| `--outro-speech` | No | `assets/outro_speech.txt` | Custom outro speech (inline text or path to .txt file) |
 | `--duration` | No | `2.0` | Target duration in minutes |
 | `--profile` | No | *(default)* | AWS profile for Bedrock |
 | `--polly-profile` | No | *(same as profile)* | AWS profile for Polly |
@@ -102,6 +104,8 @@ The folder name format is: `YYYYMMDD-HHMM_<slugified-title>`
 | `--model` | No | *(default)* | Override the Bedrock model ID |
 | `--thinking` | No | `false` | Enable adaptive thinking for script generation |
 | `--verbose` | No | `false` | Enable verbose logging output |
+| `--normalize` | No | `true` | Normalize audio loudness to -14 LUFS (EBU R128 podcast standard). Enabled by default. |
+| `--no-normalize` | No | `false` | Disable audio normalization |
 
 ### `generate` only
 
@@ -119,6 +123,8 @@ The folder name format is: `YYYYMMDD-HHMM_<slugified-title>`
 | `--intro-music` | No | *(from config)* | Override music file |
 | `--music-volume` | No | *(from config)* | Override music volume |
 | `--polly-endpoint` | No | *(from config)* | Override Polly endpoint URL |
+| `--intro-speech` | No | *(from config)* | Override intro speech |
+| `--outro-speech` | No | *(from config)* | Override outro speech |
 
 ## Typical Agent Workflows
 
@@ -181,20 +187,14 @@ Standard generative voices (always available):
 | Name | Language | Gender |
 |------|----------|--------|
 | Matthew | en-US | Male |
-| Stephen | en-US | Male |
 | Danielle | en-US | Female |
-| Joanna | en-US | Female |
 | Ruth | en-US | Female |
-| Salli | en-US | Female |
-| Tiffany | en-US | Female |
-| Amy | en-GB | Female |
-| Brian | en-GB | Male |
-| Olivia | en-AU | Female |
-| Aria | en-NZ | Female |
-| Niamh | en-IE | Female |
-| Kajal | en-IN | Female |
-| Jasmine | en-SG | Female |
-| Ayanda | en-ZA | Female |
+| Kenneth | en-US | Male |
+| Tiffany | en-US | Feminine |
+| Olivia | en-AU | Feminine |
+| Amy | en-GB | Feminine |
+| Kiara | en-IN | Feminine |
+| Arjun | en-IN | Masculine |
 
 Any raw Polly voice ID (e.g. `vc-56f8fbd479`) can also be passed directly.
 
@@ -205,22 +205,6 @@ Any raw Polly voice ID (e.g. `vc-56f8fbd479`) can also be passed directly.
 - AWS credentials with Bedrock (Claude) + Polly generative engine access
 - For custom/beta endpoints: account must be allowlisted and endpoint URL known
 - For Python 3.13+: install `audioop-lts` for pydub compatibility
-
-## Dependency Installation
-
-Python dependencies are listed in `requirements.txt` bundled with this skill. If running the script fails with an `ImportError` or `ModuleNotFoundError`, install the dependencies before retrying:
-
-```bash
-pip install -r <skill-path>/requirements.txt
-```
-
-If a Python virtual environment (`.venv`) exists in the project root, use it:
-
-```bash
-.venv/bin/pip install -r <skill-path>/requirements.txt
-```
-
-`<skill-path>` is the directory containing this `SKILL.md`. Always resolve it to an absolute path.
 
 ## Error Handling
 
@@ -236,4 +220,5 @@ If a Python virtual environment (`.venv`) exists in the project root, use it:
 - The prompt template at `assets/prompt_template.txt` can be customized to change podcast style
 - Host personalities are defined in `assets/voice1_personality.txt` and `assets/voice2_personality.txt` — edit these to change presenter behavior without touching the prompt template
 - Personalities can also be overridden per-run via `--voice1-personality` and `--voice2-personality` (accepts inline text or a path to a .txt file)
+- Intro and outro speech can be overridden per-run via `--intro-speech` and `--outro-speech` (accepts inline text or a path to a .txt file). The intro speech supports `{title}`, `{voice1_name}`, and `{voice2_name}` template variables.
 - The default Bedrock model is `us.anthropic.claude-opus-4-6-v1`; use `--model` to override if this isn't available in your account
