@@ -1,11 +1,10 @@
 ---
 name: mermaid-diagram
 description: >
-  Generates static PNG images from Mermaid diagram definitions using the local
-  Mermaid CLI (npx @mermaid-js/mermaid-cli). Use when creating or updating diagrams
-  for notebooks, documentation, or README files. Trigger keywords: mermaid, diagram,
-  flowchart, sequence diagram, graph, pipeline diagram, architecture diagram, render
-  diagram, generate diagram image, replace ASCII art.
+  Create diagram images by describing them in natural language. Supports any diagram
+  type Mermaid supports — flowcharts, sequence diagrams, architecture diagrams, ER
+  diagrams, Gantt charts, and more. Use when the user wants to visualize a workflow,
+  system architecture, process, or relationship as an image file.
 compatibility: Kiro IDE, Claude Code, Codex, Cursor
 metadata:
   author: schultkr
@@ -14,9 +13,7 @@ metadata:
 
 # Mermaid Diagram Skill
 
-Renders Mermaid diagram definitions into high-resolution PNG images using the local
-Mermaid CLI. All rendering happens locally — never use external services like
-mermaid.ink.
+This skill creates diagram images from natural language descriptions or Mermaid syntax. It supports any diagram type Mermaid supports. All rendering happens locally — never use external services like mermaid.ink.
 
 ## Prerequisites
 
@@ -34,8 +31,7 @@ If not installed, recommend:
 - **Windows**: Download from https://nodejs.org/
 
 > [!NOTE]
-> You do not need to install `@mermaid-js/mermaid-cli` globally. The `npx --yes` flag
-> handles downloading it on demand.
+> You do not need to install `@mermaid-js/mermaid-cli` globally. The `npx --yes` flag handles downloading it on demand.
 
 ---
 
@@ -43,8 +39,7 @@ If not installed, recommend:
 
 ### 1. Write the Mermaid Definition
 
-Write the Mermaid syntax to a temporary file prefixed with `_` in the target
-output directory (or workspace root if no clear target exists).
+Write the Mermaid syntax to a temporary file prefixed with `_` in the target output directory (or workspace root if no clear target exists).
 
 - File name pattern: `_<descriptive-name>.mmd`
 - Example: `_pipeline-overview.mmd`
@@ -59,11 +54,9 @@ graph TD
 
 Resolve where the rendered PNG should live:
 
-- If the diagram is for a Jupyter notebook or markdown file, place the PNG in an
-  `images/` directory relative to that document.
+- If the diagram is for a Jupyter notebook or markdown file, place the PNG in an `images/` directory relative to that document.
 - If `images/` does not exist, create it.
-- Name the output file descriptively (e.g., `01-pipeline-overview.png`,
-  `architecture.png`).
+- Name the output file descriptively (e.g., `01-pipeline-overview.png`, `architecture.png`).
 
 ### 3. Render with Mermaid CLI
 
@@ -89,13 +82,11 @@ Key flags:
 
 ### 4. Clean Up
 
-Delete the temporary `_*.mmd` file after successful rendering. The `.mmd` file is
-disposable — the PNG is the artifact.
+Delete the temporary `_*.mmd` file after successful rendering. The `.mmd` file is disposable — the PNG is the artifact.
 
 ### 5. Return the Image Reference
 
-Provide the relative path to the generated image so it can be embedded in the
-target document.
+Provide the relative path to the generated image so it can be embedded in the target document.
 
 For Jupyter notebooks and markdown files:
 ```markdown
