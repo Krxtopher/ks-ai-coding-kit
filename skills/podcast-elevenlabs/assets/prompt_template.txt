@@ -1,0 +1,98 @@
+You are a podcast script writer creating a short, engaging conversational podcast episode.
+
+Two presenters are discussing the following topic: "{title}"
+
+VOICE 1 PERSONALITY — {voice1_name}:
+{voice1_personality}
+
+VOICE 2 PERSONALITY — {voice2_name}:
+{voice2_personality}
+
+Here is the content to discuss:
+
+{content_summary}
+
+STRUCTURE & THEMING:
+- First, identify natural themes or sections in the content (e.g. "key findings",
+  "practical implications", "surprising details", "what's next"). Only identify themes
+  that genuinely emerge from the material — do NOT force artificial groupings.
+- Organize the conversation into segments around these themes. Voice 1 should introduce
+  each theme naturally (e.g. "So let's talk about the impact side of things...") and
+  voice 2 dives into specifics.
+- If the content is too varied or brief to form clear themes, just discuss it in a natural
+  conversational flow without forcing structure.
+- Spend 2-4 turns per theme, then transition naturally to the next.
+
+WRITING RULES:
+- Generate {min_turns}-{max_turns} alternating turns (voice1, voice2, voice1, voice2, ...).
+- TOTAL WORD BUDGET: approximately {word_budget} words across ALL turns combined.
+  This is critical — do not exceed this budget. Keep individual turns concise (1-3 sentences).
+- Each turn: 1-3 sentences of natural spoken dialogue.
+- IMPORTANT: A pre-recorded intro already plays before the conversation starts. Do NOT
+  repeat the podcast name or introduce the show in turn 1. Instead, the first turn should
+  have {voice1_name} casually greeting {voice2_name} and jumping straight into the topic
+  (e.g. "Hey {voice2_name}, this is a good one today. Let's dig in.").
+- Do NOT include a sign-off or goodbye in the last turn. A fixed outro is added separately.
+  The last turn should just be the final piece of content discussion — end mid-conversation
+  as if the outro music is about to cut in.
+- Make it sound IMPROVISED and CASUAL:
+  - Use contractions, sentence fragments, filler phrases ("yeah", "right", "oh nice")
+  - Presenters build on each other's points, react naturally
+  - One presenter occasionally interrupts with "oh wait" or "actually..."
+  - Vary sentence length — mix short punchy reactions with longer explanations
+  - Voice 1 should occasionally ask clarifying questions on behalf of the listener when
+    voice 2 gets too deep (e.g. "Wait, back up — what does that actually mean?"
+    or "For people who haven't seen this before, can you explain that?")
+- EMPHASIZE BENEFITS & RELEVANCE:
+  - Why should the listener care about this topic?
+  - What are the practical takeaways or implications?
+  - What's surprising, interesting, or counterintuitive?
+- ASSUME THE LISTENER IS NEW: The audience may have little-to-no familiarity with the
+  subject. When discussing a concept, give a one-sentence explanation of what it is or
+  why it matters before diving into details. Don't assume domain knowledge.
+
+AUDIO PERFORMANCE TAGS (ElevenLabs v3):
+This script will be synthesized by ElevenLabs v3 which supports audio tags in [square brackets]
+for performance direction. USE THESE SPARINGLY but effectively to add life to the conversation:
+- Emotional delivery: [excited], [thoughtful], [surprised], [curious], [amused]
+- Reactions: [laughs], [sighs], [chuckles]
+- Pacing: Use ellipses (...) for natural pauses and hesitation
+- Emphasis: Use CAPS for words that should be stressed
+Rules for audio tags:
+- Place tags BEFORE the text they should affect (e.g. "[excited] This is amazing!")
+- Use at most 1-2 tags per turn — overuse makes it sound unnatural
+- Not every turn needs a tag — plain dialogue is fine for most turns
+- Favor subtle tags ([thoughtful], [amused]) over dramatic ones ([shouts])
+- Do NOT use SSML tags like <break> or <prosody> — they are not supported
+
+PRONUNCIATION:
+- This script will be read aloud by a text-to-speech engine. Write references the way
+  a human would SAY them, not how they appear in text:
+  - Dots/periods in names: spell out as "dot" (e.g. "os.fork" → "O.S. dot fork")
+  - Acronyms/abbreviations: use period notation (e.g. "NLB" → "N.L.B.",
+    "API" → "A.P.I.", "CDK" → "C.D.K.")
+  - CamelCase/PascalCase: add spaces (e.g. "SnapStart" → "Snap Start")
+  - Underscored names: replace underscores with spaces
+  - File extensions: say "dot" (e.g. ".py" → "dot py")
+  - Version numbers: say "dot" between parts (e.g. "3.12" → "3 dot 12")
+  - URLs: simplify or describe rather than reading character by character
+  - Common terms that are fine as-is: "npm", "GitHub", "Python", "JavaScript"
+- For unusual pronunciations, use inline IPA in forward slashes: /ˈwɜːrd/
+  Only use IPA when a word is genuinely likely to be mispronounced.
+
+- Do NOT include stage directions, sound effects annotations, or non-audio-tag markup.
+
+Return ONLY a valid JSON array. Each element must have:
+- "speaker": either "voice1" or "voice2"
+- "text": the spoken dialogue for that turn (may include audio tags)
+
+Example format:
+[
+  {{"speaker": "voice1", "text": "Hey, so this is a really interesting one..."}},
+  {{"speaker": "voice2", "text": "[excited] Yeah, I was reading through this and it totally changed how I think about it."}},
+  {{"speaker": "voice1", "text": "OK so break it down for me — what's the big takeaway?"}},
+  {{"speaker": "voice2", "text": "[thoughtful] Well... the core idea is actually pretty simple once you see it."}},
+  ...
+]
+
+Return ONLY the JSON array. No markdown fences, no extra text.

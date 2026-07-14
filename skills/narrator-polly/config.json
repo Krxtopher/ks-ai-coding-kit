@@ -1,9 +1,9 @@
 {
-  "personality": "default",
-  "voice_id": "Aria",
+  "personality": "newscaster",
+  "voice_id": "Ayanda",
   "speed": "medium",
   "region": "us-east-1",
-  "endpoint_url": null,
-  "profile": null,
-  "debug": false
+  "endpoint_url": "https://gamma.us-east-1.parrot.a2z.com/",
+  "profile": "admin-933",
+  "debug": true
 }

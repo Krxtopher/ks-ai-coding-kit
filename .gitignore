@@ -42,3 +42,4 @@ voices-*.bin
 
 # Node (if CLI is ever built in JS)
 node_modules/
+output/

@@ -1,0 +1,2 @@
+Welcome to {title}, your audio briefing.
+I'm {voice1_name}, here with {voice2_name}. Let's get into it.

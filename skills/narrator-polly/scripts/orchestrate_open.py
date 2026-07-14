@@ -228,11 +228,13 @@ class RealtimeMixer:
         music_data: np.ndarray,
         music_volume: float = 0.8,
         ramp_duration: float = 0.4,
+        loop: bool = True,
     ):
         self.music_data = music_data
         self.music_volume = music_volume
         self.ramp_duration = ramp_duration
         self.ramp_samples = int(ramp_duration * SAMPLE_RATE)
+        self.loop = loop
 
         # Playback position in the music track
         self.music_pos = 0
@@ -320,7 +322,7 @@ class RealtimeMixer:
             music_end = self.music_pos + frames
             if music_end <= len(self.music_data):
                 music_chunk = self.music_data[self.music_pos:music_end].copy()
-            else:
+            elif self.loop:
                 # Loop the music if we reach the end
                 remaining = len(self.music_data) - self.music_pos
                 music_chunk = np.zeros((frames, CHANNELS), dtype=np.float32)
@@ -332,8 +334,15 @@ class RealtimeMixer:
                     wrap_end = min(wrapped, len(self.music_data))
                     music_chunk[remaining:remaining + wrap_end] = self.music_data[:wrap_end]
                 music_end = wrapped
+            else:
+                # No looping — play remaining samples then silence
+                remaining = max(0, len(self.music_data) - self.music_pos)
+                music_chunk = np.zeros((frames, CHANNELS), dtype=np.float32)
+                if remaining > 0:
+                    music_chunk[:remaining] = self.music_data[self.music_pos:self.music_pos + remaining]
+                music_end = self.music_pos + frames
 
-            self.music_pos = music_end if music_end <= len(self.music_data) else music_end % max(len(self.music_data), 1)
+            self.music_pos = music_end if music_end <= len(self.music_data) else (music_end % max(len(self.music_data), 1) if self.loop else music_end)
 
             # ── Apply gain envelope to music ─────────────────────────
             if self.ramp_remaining > 0:
@@ -438,6 +447,7 @@ def run_cold_open(
         sys.exit(1)
 
     music_volume = cold_open.get("music_volume", 0.8)
+    loop = cold_open.get("loop", True)
     segments = cold_open.get("segments", [])
 
     # Template variables for speech text
@@ -480,6 +490,7 @@ def run_cold_open(
         music_data=music_data,
         music_volume=music_volume,
         ramp_duration=0.4,
+        loop=loop,
     )
 
     # ── Start the audio stream — music plays immediately ─────────────────

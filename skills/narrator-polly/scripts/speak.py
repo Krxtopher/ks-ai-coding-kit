@@ -40,8 +40,8 @@ DEFAULT_VOICE_ID = "Ruth"
 DEFAULT_SPEED = "medium"  # prosody rate: x-slow, slow, medium, fast, x-fast
 DEFAULT_REGION = "us-west-2"
 
-# Output format: OGG Vorbis at 24kHz — low latency, high quality, small payload
-OUTPUT_FORMAT = "ogg_vorbis"
+# Output format: MP3 at 24kHz — universally supported, good quality
+OUTPUT_FORMAT = "mp3"
 SAMPLE_RATE = "24000"
 
 # Config file lives alongside the skill (one level up from scripts/)
@@ -173,7 +173,7 @@ def _write_debug_artifacts(
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     base_name = f"{timestamp}_{voice_id}"
 
-    audio_path = debug_dir / f"{base_name}.ogg"
+    audio_path = debug_dir / f"{base_name}.mp3"
     payload_path = debug_dir / f"{base_name}.json"
 
     try:
