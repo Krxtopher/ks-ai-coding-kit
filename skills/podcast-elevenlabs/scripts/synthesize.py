@@ -91,12 +91,12 @@ def synthesize_segment(
     similarity_boost: float = 0.75,
     style: float = 0.0,
     speed: float = 1.0,
-) -> bytes:
+) -> bytes | None:
     """Synthesize a single text segment and return raw audio bytes.
 
     For models that don't support audio tags (anything not in AUDIO_TAG_MODELS),
     tags like [excited] or [laughs] are automatically stripped before sending
-    to the API.
+    to the API. Returns None if the text is empty after processing.
 
     Args:
         api_key: ElevenLabs API key.
@@ -124,9 +124,8 @@ def synthesize_segment(
     synth_text = text if model in AUDIO_TAG_MODELS else strip_audio_tags(text)
 
     if not synth_text.strip():
-        logger.warning("Empty text after processing, returning silence")
-        # Return minimal valid MP3 frame (silence)
-        return b""
+        logger.warning("Empty text after processing, skipping synthesis")
+        return None
 
     response = client.text_to_speech.convert(
         voice_id=voice_id,
@@ -213,6 +212,10 @@ def synthesize_segments(
             speed=speed,
         )
         elapsed = time.perf_counter() - start
+
+        if audio is None:
+            print(f"SKIPPED (empty text)")
+            continue
 
         segments.append(audio)
         print(f"OK ({len(audio):,} bytes, {elapsed:.1f}s)")

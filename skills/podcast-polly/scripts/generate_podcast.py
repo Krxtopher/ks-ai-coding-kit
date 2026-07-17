@@ -814,7 +814,7 @@ def cmd_synthesize(args: argparse.Namespace) -> None:
     print(f"    Title:         {config['title']}")
     print(f"    Voice 1:       {voice1_name} ({voice1_voice['id']})")
     print(f"    Voice 2:       {voice2_name} ({voice2_voice['id']})")
-    print(f"    Endpoint:      {config['endpoint']}")
+    print(f"    Endpoint:      {config.get('polly_endpoint', 'default')}")
     print(f"    Script turns:  {len(script)}")
     if config.get("intro_music"):
         print(f"    Music:         {config['intro_music']}")

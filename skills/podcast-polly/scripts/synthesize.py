@@ -88,12 +88,15 @@ def synthesize_segment(
     )
 
     stream = response["AudioStream"]
-    audio_data = bytearray()
-    while True:
-        chunk = stream.read(CHUNK_SIZE)
-        if not chunk:
-            break
-        audio_data.extend(chunk)
+    try:
+        audio_data = bytearray()
+        while True:
+            chunk = stream.read(CHUNK_SIZE)
+            if not chunk:
+                break
+            audio_data.extend(chunk)
+    finally:
+        stream.close()
 
     return bytes(audio_data)
 
