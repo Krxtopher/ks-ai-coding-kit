@@ -8,10 +8,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# Kiro workspace config (don't ship personal config)
+# Personal agent config
+.agents/
 .kiro/
-
-# Other personal config
 .agent-memory/
 
 # Local notes (personal, not committed)
@@ -42,4 +41,6 @@ voices-*.bin
 
 # Node (if CLI is ever built in JS)
 node_modules/
+
+# Generated outputs and temp files
 output/
