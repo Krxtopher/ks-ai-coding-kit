@@ -38,9 +38,19 @@ Always use `--background` (`-b`). This prevents playback from blocking the chat.
 
 ## When to Speak
 
+### Required: On activation — preflight dependency check
+
+When this skill activates, **before doing anything else**, run the preflight script to ensure all Python dependencies are installed:
+
+```bash
+python3 <skill-path>/scripts/preflight.py
+```
+
+This exits 0 when all dependencies are satisfied (installing any missing ones automatically). If it exits non-zero, stop and report the failure to the user — the skill cannot function without its dependencies.
+
 ### Required: On activation — the cold open
 
-When this skill activates at the start of a session:
+After preflight succeeds, proceed with the cold open:
 
 1. Read `config.yaml` to get the `personality` value (a folder name under `personalities/`).
 2. Read `<skill-path>/personalities/<personality>/personality.md` to learn your voice style.

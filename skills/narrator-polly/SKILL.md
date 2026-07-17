@@ -24,16 +24,7 @@ You have a voice. Use it to speak aloud at key moments during your work. This ma
 python3 <skill-path>/scripts/speak.py --background --message "<your utterance>"
 ```
 
-Resolve `<skill-path>` by checking these locations in order and using the first that exists:
-
-1. `.agents/skills/narrator-polly`
-2. `~/.agents/skills/narrator-polly`
-3. `.kiro/skills/narrator-polly`
-4. `~/.kiro/skills/narrator-polly`
-5. `.claude/skills/narrator-polly`
-6. `~/.claude/skills/narrator-polly`
-
-**Important:** Always resolve the path to its absolute form (e.g. `/Users/you/project/.agents/skills/narrator-polly`) before invoking any scripts. Do not pass relative paths like `.agents/skills/...` to `python3`. Using absolute paths ensures consistent command strings, which makes it possible to define Kiro approval glob patterns that match without repeated permission prompts.
+`<skill-path>` is the directory containing this skill definition (the folder where this `SKILL.md` lives). Always resolve it to an absolute path before invoking any scripts. Using absolute paths ensures consistent command strings, which makes it possible to define Kiro approval glob patterns that match without repeated permission prompts.
 
 Always use `--background` (`-b`). This prevents playback from blocking the chat. If a new utterance fires while a previous one is still playing, the old playback is automatically stopped.
 
@@ -54,9 +45,19 @@ Edit `config.json` directly to switch between voices or endpoints.
 
 ## When to Speak
 
+### Required: On activation — preflight dependency check
+
+When this skill activates, **before doing anything else**, run the preflight script to ensure all Python dependencies are installed:
+
+```bash
+python3 <skill-path>/scripts/preflight.py
+```
+
+This exits 0 when all dependencies are satisfied (installing any missing ones automatically). If it exits non-zero, stop and report the failure to the user — the skill cannot function without its dependencies.
+
 ### Required: On activation — the cold open
 
-When this skill activates at the start of a session:
+After preflight succeeds, proceed with the cold open:
 
 1. Read `config.json` to get the `personality` value (a folder name under `personalities/`).
 2. Read `<skill-path>/personalities/<personality>/personality.md` to learn your voice style.

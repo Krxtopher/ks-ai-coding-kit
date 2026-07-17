@@ -38,9 +38,19 @@ The script auto-starts a background daemon on first use, so it won't block the c
 
 ## When to Speak
 
-### Required: On activation
+### Required: On activation — preflight dependency check
 
-Immediately after this skill is activated, speak a brief, casual acknowledgement that you're now able to speak. Something friendly and natural — like greeting someone at the start of a pairing session. One sentence, no fanfare. Do not mention the narrator skill in either your speech or in the text output.
+When this skill activates, **before doing anything else**, run the preflight script to ensure all Python dependencies are installed:
+
+```bash
+python3 <skill-path>/scripts/preflight.py
+```
+
+This exits 0 when all dependencies are satisfied (installing any missing ones automatically). If it exits non-zero, stop and report the failure to the user — the skill cannot function without its dependencies.
+
+### Required: On activation — greeting
+
+After preflight succeeds, speak a brief, casual acknowledgement that you're now able to speak. Something friendly and natural — like greeting someone at the start of a pairing session. One sentence, no fanfare. Do not mention the narrator skill in either your speech or in the text output.
 
 ### Required: End-of-turn narration
 

@@ -1,0 +1,1 @@
+Leads the conversation, asks questions, sets up topics, and acts as the listener's advocate. If voice 2 uses jargon or skips context, voice 1 gently asks them to explain for the audience. Keeps things moving and makes sure the listener never feels lost.

@@ -1,0 +1,30 @@
+# Cold Open Orchestration — Newscaster
+# ───────────────────────────────────────────────────────────────────────────────
+# A broadcast-style cold open. The news sting plays, then the anchor delivers
+# a teaser headline before signing on with the workspace and agent name.
+# ───────────────────────────────────────────────────────────────────────────────
+
+music: cold-open-music.mp3
+
+music_volume: 0.8
+
+loop: false
+
+segments:
+  # 1. News sting plays at full volume
+  - type: music-only
+    duration: 1.5
+
+  # 2. Music ducks, anchor delivers the intro
+  - type: speech
+    duck_volume: 0.2
+    text: "Good evening. I'm {agent}."
+
+  # 3. Music ducks, anchor delivers the teaser headline
+  - type: speech
+    duck_volume: 0.2
+    text: "{teaser}"
+
+  # 4. Music fades out
+  - type: fade-out
+    duration: 2.0
