@@ -23,6 +23,8 @@ You have a voice. Use it to speak aloud at key moments during your work. This ma
 python3 <skill-path>/scripts/speak.py --background --message "<your utterance>"
 ```
 
+On Windows, `python3` is often only a Microsoft Store stub; use `python` there for this and every other command in this skill.
+
 Resolve `<skill-path>` by checking these locations in order and using the first that exists:
 
 1. `.agents/skills/narrator-elevenlabs`

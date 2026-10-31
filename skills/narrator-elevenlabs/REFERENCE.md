@@ -6,7 +6,7 @@ Detailed setup, configuration, and customization guide. The agent does not need 
 
 1. An ElevenLabs account with API access (Creator plan or above recommended)
 2. The `ELEVENLABS_API_KEY` environment variable set to your API key
-3. An audio player installed: **mpv** (recommended) or **ffplay** — used by `speak.py` for streaming TTS playback
+3. An audio player installed: **mpv** (recommended) or **ffplay** — used by `speak.py` for streaming TTS playback. On Windows: `winget install --id shinchiro.mpv --exact`, then add `C:\Program Files\MPV Player` to your PATH (the installer does not).
 4. Python dependencies: `pip install -r <skill-path>/requirements.txt`
 
 > [!NOTE]

@@ -208,6 +208,24 @@ def _kill_previous_player() -> None:
             pass
 
 
+def _spawn_detached(cmd: list[str]) -> None:
+    """Start cmd in its own session with no stdio, so it outlives the caller.
+
+    On Windows the child gets a hidden console (CREATE_NO_WINDOW), which the
+    player it starts inherits, so no console window pops up for mpv.com.
+    """
+    kwargs: dict = {
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
+    if sys.platform == "win32":
+        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
+    else:
+        kwargs["start_new_session"] = True
+    subprocess.Popen(cmd, **kwargs)
+
+
 def _record_player_pid(pid: int) -> None:
     """Record the player PID so a subsequent invocation can kill it."""
     pid_file = SCRIPT_DIR.parent / ".narrator.pid"
@@ -390,6 +408,8 @@ def main() -> None:
         action="store_true",
         help="Don't wait for playback to finish. Script exits after piping audio to player.",
     )
+    # Internal: set on the detached child that --background spawns.
+    parser.add_argument("--record-pid", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--save",
         action="store_true",
@@ -469,45 +489,35 @@ def main() -> None:
         return
 
     if args.background:
-        # Fork the entire streaming + playback into a detached child process
-        # so the script returns immediately to the caller.
+        # Re-run this script without --background in a detached child process
+        # so the caller returns immediately. Spawning rather than os.fork()
+        # works on Windows too, and matches orchestrate_open.py.
         _kill_previous_player()  # Pre-empt any ongoing narration
-        pid = os.fork()
-        if pid > 0:
-            # Parent — exit immediately; child will record player PID itself
-            return
-        # Child — detach from parent's process group
-        os.setsid()
-        # Redirect stdio to /dev/null so nothing ties us to the terminal
-        devnull = os.open(os.devnull, os.O_RDWR)
-        os.dup2(devnull, 0)
-        os.dup2(devnull, 1)
-        os.dup2(devnull, 2)
-        os.close(devnull)
-        stream_speech(
-            message=message,
-            api_key=api_key,
-            voice_id=voice_id,
-            model_id=model_id,
-            speed=speed,
-            stability=stability,
-            similarity_boost=similarity,
-            style=style,
-            record_pid=True,
-        )
-        os._exit(0)
-    else:
-        _kill_previous_player()
-        stream_speech(
-            message=message,
-            api_key=api_key,
-            voice_id=voice_id,
-            model_id=model_id,
-            speed=speed,
-            stability=stability,
-            similarity_boost=similarity,
-            style=style,
-        )
+        _spawn_detached([
+            sys.executable, str(Path(__file__).resolve()),
+            f"--message={message}",  # one token, so a leading "-" isn't read as a flag
+            "--voice", voice_id,
+            "--model", model_id,
+            "--speed", str(speed),
+            "--stability", str(stability),
+            "--similarity", str(similarity),
+            "--style", str(style),
+            "--record-pid",
+        ])
+        return
+
+    _kill_previous_player()
+    stream_speech(
+        message=message,
+        api_key=api_key,
+        voice_id=voice_id,
+        model_id=model_id,
+        speed=speed,
+        stability=stability,
+        similarity_boost=similarity,
+        style=style,
+        record_pid=args.record_pid,
+    )
 
 
 if __name__ == "__main__":
