@@ -131,7 +131,7 @@ These rules apply regardless of personality:
 
 ## Audio Tags
 
-You can use inline audio tags to add human expressiveness to your delivery. These are powered by ElevenLabs v3 and are **freeform** — the model interprets any word in square brackets as a performance direction. You are not limited to a fixed vocabulary.
+You can use inline audio tags to add human expressiveness to your delivery. These are powered by ElevenLabs v4 and are **freeform** — the model interprets any word in square brackets as a performance direction. You are not limited to a fixed vocabulary.
 
 **Core tags (reliable with any voice):** `[whispers]`, `[sighs]`, `[laughs]`, `[excited]`, `[sarcastic]`, `[curious]`, `[giggles]`, `[exhales]`
 
@@ -208,11 +208,11 @@ Map natural language requests to config keys:
 
 | User says | Config key | Direction |
 |-----------|-----------|-----------|
-| "talk faster" / "speed up" | `speed` | Increase by 0.05–0.1 (max 1.2) |
-| "talk slower" / "slow down" | `speed` | Decrease by 0.05–0.1 (min 0.7) |
+| "talk faster" / "speed up" | `speed` | Increase by 0.05–0.1 (max 1.2). Not supported by v4 models: offer `[rushed]` tags or a v3/v2 model instead |
+| "talk slower" / "slow down" | `speed` | Decrease by 0.05–0.1 (min 0.7). Not supported by v4 models: offer `[drawn out]` tags or a v3/v2 model instead |
 | "be more expressive" / "more emotion" | `stability` | Decrease by 0.1 (min 0.3) |
 | "be more consistent" / "less variation" | `stability` | Increase by 0.1 (max 0.8) |
-| "more character" / "more style" | `style` | Increase by 0.1 (max 0.5) |
+| "more character" / "more style" | `style` | Increase by 0.1 (max 0.5). v2 models only; on v3/v4 lower `stability` instead |
 | "less style" / "more neutral" | `style` | Decrease by 0.1 (min 0.0) |
 
 After adjusting, speak a sample so the user can hear the difference. If they want to keep tweaking, iterate.

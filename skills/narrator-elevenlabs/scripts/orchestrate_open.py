@@ -75,7 +75,8 @@ OUTPUT_FORMAT = "mp3_44100_64"
 SAMPLE_RATE = 44100
 CHANNELS = 2  # Stereo output
 
-ENGINES_WITH_AUDIO_TAGS = {"eleven_v3"}
+ENGINES_WITH_AUDIO_TAGS = {"eleven_v4_turbo", "eleven_v4", "eleven_v3"}
+ENGINES_WITHOUT_SPEED = {"eleven_v4_turbo", "eleven_v4"}
 
 logger = logging.getLogger(__name__)
 
@@ -154,8 +155,9 @@ def generate_tts_audio(
     voice_settings: dict[str, Any] = {
         "stability": stability,
         "similarity_boost": similarity_boost,
-        "speed": speed,
     }
+    if model_id not in ENGINES_WITHOUT_SPEED:
+        voice_settings["speed"] = speed
     if model_id not in ENGINES_WITH_AUDIO_TAGS:
         voice_settings["style"] = style
         voice_settings["use_speaker_boost"] = True

@@ -44,25 +44,30 @@ Browse all voices at https://elevenlabs.io/voice-library or use the Voices API t
 
 The script supports multiple ElevenLabs models via the `--model` flag or `model_id` config key. Engine-specific differences are handled automatically — the script strips audio tags, omits unsupported parameters, and respects character limits based on the selected model.
 
-| Model ID | Audio Tags | Style Param | Char Limit | Notes |
-|----------|:----------:|:-----------:|:----------:|-------|
-| `eleven_v3` | Yes | No | 5,000 | Most expressive. Uses audio tags for delivery control. |
-| `eleven_multilingual_v2` | No | Yes | 10,000 | Stable narration, 29 languages. Best for cloned voices. Default. |
-| `eleven_flash_v2_5` | No | Yes | 40,000 | Ultra-low latency (~75ms), 32 languages. |
-| `eleven_flash_v2` | No | Yes | 30,000 | Ultra-low latency, English only. |
+| Model ID | Audio Tags | Style Param | Speed Param | Char Limit | Notes |
+|----------|:----------:|:-----------:|:-----------:|:----------:|-------|
+| `eleven_v4_turbo` | Yes | No | No | 5,000 | Low latency (~100ms), expressive. $0.04 per 1,000 chars. Recommended for narration. |
+| `eleven_v4` | Yes | No | No | 5,000 | Highest-quality v4. Follows tags more reliably than v3. |
+| `eleven_v3` | Yes | No | Yes | 5,000 | Expressive, superseded by v4. Uses audio tags for delivery control. |
+| `eleven_multilingual_v2` | No | Yes | Yes | 10,000 | Stable narration, 29 languages. Script default when nothing is configured. |
+| `eleven_flash_v2_5` | No | Yes | Yes | 40,000 | Ultra-low latency (~75ms), 32 languages. |
+| `eleven_flash_v2` | No | Yes | Yes | 30,000 | Ultra-low latency, English only. |
+
+ElevenLabs doesn't document a v4 character limit, so the script uses the v3 limit of 5,000.
 
 **What happens automatically when you switch models:**
 
 - **Audio tags** (e.g. `[whispers]`, `[laughs]`) are stripped from the text before sending to models that don't support them. No garbled output, no errors.
-- **`style` parameter** is only sent to models that use it (v2 family). v3 ignores style in favor of audio tags.
+- **`style` parameter** is only sent to models that use it (v2 family). v3 and v4 ignore style in favor of audio tags.
+- **`speed` parameter** is omitted for v4 models, which don't support it. Use pacing tags or punctuation (ellipses) instead.
 - **`use_speaker_boost`** is only sent to models that support it.
 - **Character limits** are enforced with truncation and a logged warning if exceeded.
 
 Unknown model IDs fall back to conservative defaults (no audio tags, style included, 5,000 char limit).
 
-## Audio Tags (v3 only)
+## Audio Tags (v3 and v4)
 
-Eleven v3 supports inline audio tags in square brackets for controlling vocal delivery. Place them directly in your utterance text. When using non-v3 models, the script automatically strips these tags before sending the request — so agents can always include them without worrying about which engine is active.
+Eleven v3 and v4 support inline audio tags in square brackets for controlling vocal delivery. Place them directly in your utterance text. v4 follows tags more reliably than v3. When using v2 models, the script automatically strips these tags before sending the request — so agents can always include them without worrying about which engine is active.
 
 **Emotional/delivery:**
 - `[whispers]` — whispered, intimate delivery
@@ -127,10 +132,10 @@ personality: default
 # ElevenLabs voice ID (browse voices at https://elevenlabs.io/voice-library)
 voice_id: 4e32WqNVWRquDa1OcRYZ
 
-# Model engine: eleven_multilingual_v2, eleven_v3, eleven_flash_v2_5, eleven_flash_v2
+# Model engine: eleven_v4_turbo, eleven_v4, eleven_v3, eleven_multilingual_v2, eleven_flash_v2_5, eleven_flash_v2
 model_id: eleven_multilingual_v2
 
-# Speech speed multiplier (0.7–1.2, default: 1.0)
+# Speech speed multiplier (0.7–1.2, default: 1.0). Not supported by v4 models (ignored).
 speed: 1.0
 
 # Voice consistency (0.0–1.0, default: 0.5). Lower = more expressive, higher = more stable.

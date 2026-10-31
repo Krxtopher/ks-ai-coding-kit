@@ -5,7 +5,7 @@ Text-to-speech narrator using ElevenLabs streaming API.
 Streams audio from ElevenLabs and plays it back immediately via ffplay or mpv.
 Designed for low-latency narration during coding sessions.
 
-Supports multiple ElevenLabs models (v3, multilingual_v2, flash_v2_5, etc.)
+Supports multiple ElevenLabs models (v4_turbo, v4, v3, multilingual_v2, flash_v2_5, etc.)
 and gracefully handles feature differences between engines — including audio
 tag stripping for models that don't support them and parameter filtering.
 
@@ -60,30 +60,48 @@ logger = logging.getLogger(__name__)
 # ─── Engine capability map ───────────────────────────────────────────────────
 
 # Defines per-model feature support and constraints. Models not listed here
-# fall back to conservative defaults (no audio tags, style included, 5000 char limit).
+# fall back to conservative defaults (no audio tags, style and speed included, 5000 char limit).
 
 ENGINE_CAPS: dict[str, dict] = {
+    "eleven_v4_turbo": {
+        "audio_tags": True,
+        "style_param": False,       # v4 has no style or speed controls
+        "speed_param": False,
+        "use_speaker_boost": False,
+        "char_limit": 5000,          # not documented for v4; matches v3
+    },
+    "eleven_v4": {
+        "audio_tags": True,
+        "style_param": False,
+        "speed_param": False,
+        "use_speaker_boost": False,
+        "char_limit": 5000,
+    },
     "eleven_v3": {
         "audio_tags": True,
         "style_param": False,       # v3 uses audio tags for expressiveness, not style
+        "speed_param": True,
         "use_speaker_boost": False,  # not documented for v3
         "char_limit": 5000,
     },
     "eleven_multilingual_v2": {
         "audio_tags": False,
         "style_param": True,
+        "speed_param": True,
         "use_speaker_boost": True,
         "char_limit": 10000,
     },
     "eleven_flash_v2_5": {
         "audio_tags": False,
         "style_param": True,
+        "speed_param": True,
         "use_speaker_boost": True,
         "char_limit": 40000,
     },
     "eleven_flash_v2": {
         "audio_tags": False,
         "style_param": True,
+        "speed_param": True,
         "use_speaker_boost": True,
         "char_limit": 30000,
     },
@@ -93,6 +111,7 @@ ENGINE_CAPS: dict[str, dict] = {
 _DEFAULT_CAPS: dict = {
     "audio_tags": False,
     "style_param": True,
+    "speed_param": True,
     "use_speaker_boost": True,
     "char_limit": 5000,
 }
@@ -105,7 +124,7 @@ def get_engine_caps(model_id: str) -> dict:
 
 # ─── Audio tag handling ──────────────────────────────────────────────────────
 
-# Pattern matches ElevenLabs v3 audio tags like [whispers], [laughs], [sighs], etc.
+# Pattern matches ElevenLabs v3/v4 audio tags like [whispers], [laughs], [sighs], etc.
 _AUDIO_TAG_PATTERN = re.compile(r"\[(?:whispers|sighs|laughs|excited|sarcastic|curious|giggles|exhales)\]", re.IGNORECASE)
 
 
@@ -138,8 +157,8 @@ def save_config(config: dict) -> None:
     """Write user preferences to config.yaml with descriptive comments."""
     comments = {
         "voice_id": "# ElevenLabs voice ID (browse voices at https://elevenlabs.io/voice-library)",
-        "model_id": "# Model engine: eleven_multilingual_v2, eleven_v3, eleven_flash_v2_5, eleven_flash_v2",
-        "speed": "# Speech speed multiplier (0.7\u20131.2, default: 1.0)",
+        "model_id": "# Model engine: eleven_v4_turbo, eleven_v4, eleven_v3, eleven_multilingual_v2, eleven_flash_v2_5, eleven_flash_v2",
+        "speed": "# Speech speed multiplier (0.7\u20131.2, default: 1.0). Not supported by v4 models (ignored).",
         "stability": "# Voice consistency (0.0\u20131.0, default: 0.5). Lower = more expressive, higher = more stable.",
         "similarity_boost": "# How closely to match the original voice (0.0\u20131.0, default: 0.75)",
         "style": "# Style exaggeration (0.0\u20131.0, default: 0.0). Higher adds latency. Only used by v2 models.",
@@ -289,8 +308,9 @@ def stream_speech(
     voice_settings: dict = {
         "stability": stability,
         "similarity_boost": similarity_boost,
-        "speed": speed,
     }
+    if caps["speed_param"]:
+        voice_settings["speed"] = speed
     if caps["style_param"]:
         voice_settings["style"] = style
     if caps["use_speaker_boost"]:
@@ -376,14 +396,14 @@ def main() -> None:
         default=None,
         help=(
             "ElevenLabs model ID (default: config > env > eleven_multilingual_v2). "
-            "Examples: eleven_v3, eleven_multilingual_v2, eleven_flash_v2_5"
+            "Examples: eleven_v4_turbo, eleven_v4, eleven_v3, eleven_multilingual_v2, eleven_flash_v2_5"
         ),
     )
     parser.add_argument(
         "--speed",
         type=float,
         default=None,
-        help="Speech speed multiplier (default: 1.0)",
+        help="Speech speed multiplier (default: 1.0). Ignored by v4 models",
     )
     parser.add_argument(
         "--stability",
