@@ -492,6 +492,10 @@ def main() -> None:
         # Re-run this script without --background in a detached child process
         # so the caller returns immediately. Spawning rather than os.fork()
         # works on Windows too, and matches orchestrate_open.py.
+        # The child's output is discarded, so report a missing player here.
+        if find_player() is None:
+            print("Error: No audio player found. Install mpv or ffplay (run scripts/preflight.py for steps).", file=sys.stderr)
+            sys.exit(1)
         _kill_previous_player()  # Pre-empt any ongoing narration
         _spawn_detached([
             sys.executable, str(Path(__file__).resolve()),

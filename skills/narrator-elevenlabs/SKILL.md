@@ -8,7 +8,7 @@ description: >-
 compatibility: Kiro IDE, Claude Code, Codex, Cursor
 metadata:
   author: ks-ai-coding-kit
-  version: 1.2
+  version: 1.3
   steering-inject: >
     ALWAYS activate the "narrator-elevenlabs" skill. You have a voice — use it to narrate your work aloud at high-value moments.
 ---
@@ -42,13 +42,15 @@ Always use `--background` (`-b`). This prevents playback from blocking the chat.
 
 ### Required: On activation — preflight dependency check
 
-When this skill activates, **before doing anything else**, run the preflight script to ensure all Python dependencies are installed:
+When this skill activates, **before doing anything else**, run the preflight script to make sure the narrator can speak:
 
 ```bash
 python3 <skill-path>/scripts/preflight.py
 ```
 
-This exits 0 when all dependencies are satisfied (installing any missing ones automatically). If it exits non-zero, stop and report the failure to the user — the skill cannot function without its dependencies.
+It installs any missing Python packages automatically, then checks for an audio player (mpv or ffplay) on PATH and the `ELEVENLABS_API_KEY` environment variable. It exits 0 when everything is ready.
+
+If it exits non-zero, don't narrate this session. Tell the user what's missing and give them the setup steps it printed, with its commands intact. Setting the API key is the user's step: never ask them to paste the key into the chat. Offer to run preflight again once they've finished; changes to PATH or environment variables usually need a restart of the coding tool first.
 
 ### Required: On activation — the cold open
 
